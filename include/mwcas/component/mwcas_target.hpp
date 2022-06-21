@@ -21,111 +21,111 @@
 
 #include "mwcas_field.hpp"
 
-namespace dbgroup::atomic::mwcas::component
-{
+namespace dbgroup::atomic::mwcas::component {
 /**
  * @brief A class to represent a MwCAS target.
  *
  */
-class MwCASTarget
-{
- public:
-  /*####################################################################################
-   * Public constructors and assignment operators
-   *##################################################################################*/
+class MwCASTarget {
+   public:
+    /*####################################################################################
+     * Public constructors and assignment operators
+     *##################################################################################*/
 
-  /**
-   * @brief Construct an empty MwCAS target.
-   *
-   */
-  constexpr MwCASTarget() = default;
+    /**
+     * @brief Construct an empty MwCAS target.
+     *
+     */
+    constexpr MwCASTarget() = default;
 
-  /**
-   * @brief Construct a new MwCAS target based on given information.
-   *
-   * @tparam T a class of MwCAS targets.
-   * @param addr a target memory address.
-   * @param old_val an expected value of the target address.
-   * @param new_val an desired value of the target address.
-   */
-  template <class T>
-  constexpr MwCASTarget(  //
-      void *addr,
-      const T old_val,
-      const T new_val)
-      : addr_{static_cast<std::atomic<MwCASField> *>(addr)}, old_val_{old_val}, new_val_{new_val}
-  {
-  }
+    /**
+     * @brief Construct a new MwCAS target based on given information.
+     *
+     * @tparam T a class of MwCAS targets.
+     * @param addr a target memory address.
+     * @param old_val an expected value of the target address.
+     * @param new_val an desired value of the target address.
+     */
+    template <class T>
+    constexpr MwCASTarget(  //
+        void *addr, const T old_val, const T new_val)
+        : addr_{static_cast<std::atomic<MwCASField> *>(addr)},
+          old_val_{old_val},
+          new_val_{new_val} {}
 
-  constexpr MwCASTarget(const MwCASTarget &) = default;
-  constexpr auto operator=(const MwCASTarget &obj) -> MwCASTarget & = default;
-  constexpr MwCASTarget(MwCASTarget &&) = default;
-  constexpr auto operator=(MwCASTarget &&) -> MwCASTarget & = default;
+    constexpr MwCASTarget(const MwCASTarget &) = default;
+    constexpr auto operator=(const MwCASTarget &obj) -> MwCASTarget & = default;
+    constexpr MwCASTarget(MwCASTarget &&) = default;
+    constexpr auto operator=(MwCASTarget &&) -> MwCASTarget & = default;
 
-  /*####################################################################################
-   * Public destructor
-   *##################################################################################*/
+    /*####################################################################################
+     * Public destructor
+     *##################################################################################*/
 
-  /**
-   * @brief Destroy the MwCASTarget object.
-   *
-   */
-  ~MwCASTarget() = default;
+    /**
+     * @brief Destroy the MwCASTarget object.
+     *
+     */
+    ~MwCASTarget() = default;
 
-  /*####################################################################################
-   * Public utility functions
-   *##################################################################################*/
+    /*####################################################################################
+     * Public utility functions
+     *##################################################################################*/
 
-  /**
-   * @brief Embed a descriptor into this target address to linearlize MwCAS operations.
-   *
-   * @param desc_addr a memory address of a target descriptor.
-   * @retval true if the descriptor address is successfully embedded.
-   * @retval false otherwise.
-   */
-  auto
-  EmbedDescriptor(const MwCASField desc_addr)  //
-      -> bool
-  {
-    MwCASField expected = old_val_;
-    while (true) {
-      // try to embed a MwCAS decriptor
-      addr_->compare_exchange_strong(expected, desc_addr, std::memory_order_relaxed);
-      if (!expected.IsMwCASDescriptor()) break;
+    /**
+     * @brief Embed a descriptor into this target address to linearlize MwCAS
+     * operations.
+     *
+     * @param desc_addr a memory address of a target descriptor.
+     * @retval true if the descriptor address is successfully embedded.
+     * @retval false otherwise.
+     */
+    auto EmbedDescriptor(const MwCASField desc_addr)  //
+        -> bool {
+        MwCASField expected = old_val_;
+        while (true) {
+            // try to embed a MwCAS decriptor
+            addr_->compare_exchange_strong(expected, desc_addr,
+                                           std::memory_order_relaxed);
+            if (!expected.IsMwCASDescriptor()) break;
 
-      // retry if another desctiptor is embedded
-      expected = old_val_;
+            // retry if another desctiptor is embedded
+            expected = old_val_;
+        }
+
+        return expected == old_val_;
     }
 
-    return expected == old_val_;
-  }
+    /**
+     * @brief Update/revert a value of this target address.
+     *
+     * @param desc_addr an embedded descriptor in this target address.
+     * @param mwcas_success a flag to indicate a target will be updated or
+     * reverted.
+     */
+    void CompleteMwCAS(const DescStatus st) {
+        if (st == kSucceeded) {
+            const MwCASField desired = new_val_;
+        } else {
+            const MwCASField desired = old_val_;
+        }
 
-  /**
-   * @brief Update/revert a value of this target address.
-   *
-   * @param desc_addr an embedded descriptor in this target address.
-   * @param mwcas_success a flag to indicate a target will be updated or reverted.
-   */
-  void
-  CompleteMwCAS(const bool mwcas_success)
-  {
-    const MwCASField desired = (mwcas_success) ? new_val_ : old_val_;
-    addr_->store(desired, std::memory_order_relaxed);
-  }
+        addr_->store(desired, std::memory_order_relaxed);
+    }
 
- private:
-  /*####################################################################################
-   * Internal member variables
-   *##################################################################################*/
+   private:
+    /*####################################################################################
+     * Internal member variables
+     *##################################################################################*/
 
-  /// A target memory address
-  std::atomic<MwCASField> *addr_{};
+    /// A target memory address
+    std::atomic<MwCASField> *addr_{};
 
-  /// An expected value of a target field
-  MwCASField old_val_{};
+    /// An expected value of a target field
+    MwCASField old_val_{};
 
-  /// An inserting value into a target field
-  MwCASField new_val_{};
+    /// An inserting value into a target field
+    MwCASField new_val_{};
 };
 
 }  // namespace dbgroup::atomic::mwcas::component
