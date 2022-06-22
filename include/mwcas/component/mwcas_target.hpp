@@ -104,7 +104,7 @@ class MwCASTarget {
      * reverted.
      */
     void CompleteMwCAS(const DescStatus st) {
-        if (st == kSucceeded) {
+        if (st == kStatusSucceeded) {
             const MwCASField desired = new_val_;
         } else {
             const MwCASField desired = old_val_;

@@ -136,11 +136,11 @@ class alignas(component::kCacheLineSize) MwCASDescriptor {
 
         // serialize MwCAS operations by embedding a descriptor
         size_t embedded_count = 0;
-        st_ = component::kSucceeded;  //ほんとはココだとダメ
+        status_ = component::kStatusSucceeded;  //ほんとはココだとダメ
         for (size_t i = 0; i < target_count_; ++i, ++embedded_count) {
             if (!targets_[i].EmbedDescriptor(desc_addr)) {
                 // if a target field has been already updated, MwCAS fails
-                st_ = component::kFailed;
+                status_ = component::kStatusFailed;
                 break;
             }
         }
@@ -150,7 +150,7 @@ class alignas(component::kCacheLineSize) MwCASDescriptor {
             targets_[i].CompleteMwCAS(st_);
         }
 
-        if (st_ == component::kSucceeded) {
+        if (status_ == component::kStatusSucceeded) {
             return true;
         }
         return false;
@@ -167,7 +167,7 @@ class alignas(component::kCacheLineSize) MwCASDescriptor {
     /// The number of registered MwCAS targets
     size_t target_count_{0};
 
-    component::DescStatus st_ = kUndecided;
+    component::DescStatus status_ = kStatusUndecided;
 };
 
 }  // namespace dbgroup::atomic::mwcas
