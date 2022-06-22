@@ -104,10 +104,12 @@ class MwCASTarget {
      * reverted.
      */
     void CompleteMwCAS(const DescStatus st) {
+        MwCASField desired;
+
         if (st == kStatusSucceeded) {
-            const MwCASField desired = new_val_;
+            desired = new_val_;
         } else {
-            const MwCASField desired = old_val_;
+            desired = old_val_;
         }
 
         addr_->store(desired, std::memory_order_relaxed);
