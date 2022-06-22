@@ -136,7 +136,7 @@ class alignas(component::kCacheLineSize) MwCASDescriptor {
 
         // serialize MwCAS operations by embedding a descriptor
         size_t embedded_count = 0;
-        status_ = component::kStatusSucceeded;  //ほんとはココだとダメ
+
         for (size_t i = 0; i < target_count_; ++i, ++embedded_count) {
             if (!targets_[i].EmbedDescriptor(desc_addr)) {
                 // if a target field has been already updated, MwCAS fails
@@ -145,9 +145,13 @@ class alignas(component::kCacheLineSize) MwCASDescriptor {
             }
         }
 
+        if (status_ == component::kStatusUndecided) {
+            status_ = component::kStatusSucceeded;
+        }
+
         // complete MwCAS
         for (size_t i = 0; i < embedded_count; ++i) {
-            targets_[i].CompleteMwCAS(st_);
+            targets_[i].CompleteMwCAS(status_);
         }
 
         if (status_ == component::kStatusSucceeded) {
