@@ -154,13 +154,10 @@ class alignas(component::kCacheLineSize) MwCASDescriptor {
             targets_[i].CompleteMwCAS(status_);
         }
 
-        if (status_ == component::kStatusSucceeded) {
-            status_ = component::kStatusFinished;
-            return true;
-        }
-
+        bool succeeded = status_ == component::kStatusSucceeded;
         status_ = component::kStatusFinished;
-        return false;
+
+        return succeeded;
     }
 
    private:
