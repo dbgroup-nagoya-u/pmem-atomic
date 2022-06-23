@@ -155,8 +155,11 @@ class alignas(component::kCacheLineSize) MwCASDescriptor {
         }
 
         if (status_ == component::kStatusSucceeded) {
+            status_ = component::kStatusFinished;
             return true;
         }
+
+        status_ = component::kStatusFinished;
         return false;
     }
 
