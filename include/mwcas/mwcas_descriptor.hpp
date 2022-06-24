@@ -23,155 +23,164 @@
 
 #include "component/mwcas_target.hpp"
 
-namespace dbgroup::atomic::mwcas {
+namespace dbgroup::atomic::mwcas
+{
 /**
  * @brief A class to manage a MwCAS (multi-words compare-and-swap) operation.
  *
  */
-class alignas(component::kCacheLineSize) MwCASDescriptor {
-    /*####################################################################################
-     * Type aliases
-     *##################################################################################*/
+class alignas(component::kCacheLineSize) MwCASDescriptor
+{
+  /*####################################################################################
+   * Type aliases
+   *##################################################################################*/
 
-    using MwCASTarget = component::MwCASTarget;
-    using MwCASField = component::MwCASField;
+  using MwCASTarget = component::MwCASTarget;
+  using MwCASField = component::MwCASField;
 
-   public:
-    /*####################################################################################
-     * Public constructors and assignment operators
-     *##################################################################################*/
+ public:
+  /*####################################################################################
+   * Public constructors and assignment operators
+   *##################################################################################*/
 
-    /**
-     * @brief Construct an empty descriptor for MwCAS operations.
-     *
-     */
-    constexpr MwCASDescriptor() = default;
+  /**
+   * @brief Construct an empty descriptor for MwCAS operations.
+   *
+   */
+  constexpr MwCASDescriptor() = default;
 
-    constexpr MwCASDescriptor(const MwCASDescriptor &) = default;
-    constexpr auto operator=(const MwCASDescriptor &obj)
-        -> MwCASDescriptor & = default;
-    constexpr MwCASDescriptor(MwCASDescriptor &&) = default;
-    constexpr auto operator=(MwCASDescriptor &&) -> MwCASDescriptor & = default;
+  constexpr MwCASDescriptor(const MwCASDescriptor &) = default;
+  constexpr auto operator=(const MwCASDescriptor &obj) -> MwCASDescriptor & = default;
+  constexpr MwCASDescriptor(MwCASDescriptor &&) = default;
+  constexpr auto operator=(MwCASDescriptor &&) -> MwCASDescriptor & = default;
 
-    /*####################################################################################
-     * Public destructors
-     *##################################################################################*/
+  /*####################################################################################
+   * Public destructors
+   *##################################################################################*/
 
-    /**
-     * @brief Destroy the MwCASDescriptor object.
-     *
-     */
-    ~MwCASDescriptor() = default;
+  /**
+   * @brief Destroy the MwCASDescriptor object.
+   *
+   */
+  ~MwCASDescriptor() = default;
 
-    /*####################################################################################
-     * Public getters/setters
-     *##################################################################################*/
+  /*####################################################################################
+   * Public getters/setters
+   *##################################################################################*/
 
-    /**
-     * @return the number of registered MwCAS targets
-     */
-    [[nodiscard]] constexpr auto Size() const  //
-        -> size_t {
-        return target_count_;
+  /**
+   * @return the number of registered MwCAS targets
+   */
+  [[nodiscard]] constexpr auto
+  Size() const  //
+      -> size_t
+  {
+    return target_count_;
+  }
+
+  /*####################################################################################
+   * Public utility functions
+   *##################################################################################*/
+
+  /**
+   * @brief Read a value from a given memory address.
+   * \e NOTE: if a memory address is included in MwCAS target fields, it must
+   * be read via this function.
+   *
+   * @tparam T an expected class of a target field
+   * @param addr a target memory address to read
+   * @return a read value
+   */
+  template <class T>
+  static auto
+  Read(const void *addr)  //
+      -> T
+  {
+    const auto *target_addr = static_cast<const std::atomic<MwCASField> *>(addr);
+
+    MwCASField target_word;
+    do {
+      target_word = target_addr->load(std::memory_order_relaxed);
+    } while (target_word.IsMwCASDescriptor());
+
+    return target_word.GetTargetData<T>();
+  }
+
+  /**
+   * @brief Add a new MwCAS target to this descriptor.
+   *
+   * @tparam T a class of a target
+   * @param addr a target memory address
+   * @param old_val an expected value of a target field
+   * @param new_val an inserting value into a target field
+   * @retval true if target registration succeeds
+   * @retval false if this descriptor is already full
+   */
+  template <class T>
+  constexpr auto
+  AddMwCASTarget(  //
+      void *addr,
+      const T old_val,
+      const T new_val)  //
+      -> bool
+  {
+    if (target_count_ == kMwCASCapacity) {
+      return false;
+    }
+    targets_[target_count_++] = MwCASTarget{addr, old_val, new_val};
+    return true;
+  }
+
+  /**
+   * @brief Perform a MwCAS operation by using registered targets.
+   *
+   * @retval true if a MwCAS operation succeeds
+   * @retval false if a MwCAS operation fails
+   */
+  auto
+  MwCAS()  //
+      -> bool
+  {
+    const MwCASField desc_addr{this, true};
+
+    // serialize MwCAS operations by embedding a descriptor
+    size_t embedded_count = 0;
+
+    for (size_t i = 0; i < target_count_; ++i, ++embedded_count) {
+      if (!targets_[i].EmbedDescriptor(desc_addr)) {
+        // if a target field has been already updated, MwCAS fails
+        status_ = component::kStatusFailed;
+        break;
+      }
     }
 
-    /*####################################################################################
-     * Public utility functions
-     *##################################################################################*/
-
-    /**
-     * @brief Read a value from a given memory address.
-     * \e NOTE: if a memory address is included in MwCAS target fields, it must
-     * be read via this function.
-     *
-     * @tparam T an expected class of a target field
-     * @param addr a target memory address to read
-     * @return a read value
-     */
-    template <class T>
-    static auto Read(const void *addr)  //
-        -> T {
-        const auto *target_addr =
-            static_cast<const std::atomic<MwCASField> *>(addr);
-
-        MwCASField target_word;
-        do {
-            target_word = target_addr->load(std::memory_order_relaxed);
-        } while (target_word.IsMwCASDescriptor());
-
-        return target_word.GetTargetData<T>();
+    if (status_ == component::kStatusUndecided) {
+      status_ = component::kStatusSucceeded;
     }
 
-    /**
-     * @brief Add a new MwCAS target to this descriptor.
-     *
-     * @tparam T a class of a target
-     * @param addr a target memory address
-     * @param old_val an expected value of a target field
-     * @param new_val an inserting value into a target field
-     * @retval true if target registration succeeds
-     * @retval false if this descriptor is already full
-     */
-    template <class T>
-    constexpr auto AddMwCASTarget(  //
-        void *addr, const T old_val,
-        const T new_val)  //
-        -> bool {
-        if (target_count_ == kMwCASCapacity) {
-            return false;
-        }
-        targets_[target_count_++] = MwCASTarget{addr, old_val, new_val};
-        return true;
+    // complete MwCAS
+    for (size_t i = 0; i < embedded_count; ++i) {
+      targets_[i].CompleteMwCAS(status_);
     }
 
-    /**
-     * @brief Perform a MwCAS operation by using registered targets.
-     *
-     * @retval true if a MwCAS operation succeeds
-     * @retval false if a MwCAS operation fails
-     */
-    auto MwCAS()  //
-        -> bool {
-        const MwCASField desc_addr{this, true};
+    bool succeeded = status_ == component::kStatusSucceeded;
+    status_ = component::kStatusFinished;
 
-        // serialize MwCAS operations by embedding a descriptor
-        size_t embedded_count = 0;
+    return succeeded;
+  }
 
-        for (size_t i = 0; i < target_count_; ++i, ++embedded_count) {
-            if (!targets_[i].EmbedDescriptor(desc_addr)) {
-                // if a target field has been already updated, MwCAS fails
-                status_ = component::kStatusFailed;
-                break;
-            }
-        }
+ private:
+  /*####################################################################################
+   * Internal member variables
+   *##################################################################################*/
 
-        if (status_ == component::kStatusUndecided) {
-            status_ = component::kStatusSucceeded;
-        }
+  /// Target entries of MwCAS
+  MwCASTarget targets_[kMwCASCapacity];
 
-        // complete MwCAS
-        for (size_t i = 0; i < embedded_count; ++i) {
-            targets_[i].CompleteMwCAS(status_);
-        }
+  /// The number of registered MwCAS targets
+  size_t target_count_{0};
 
-        bool succeeded = status_ == component::kStatusSucceeded;
-        status_ = component::kStatusFinished;
-
-        return succeeded;
-    }
-
-   private:
-    /*####################################################################################
-     * Internal member variables
-     *##################################################################################*/
-
-    /// Target entries of MwCAS
-    MwCASTarget targets_[kMwCASCapacity];
-
-    /// The number of registered MwCAS targets
-    size_t target_count_{0};
-
-    component::DescStatus status_{component::kStatusUndecided};
+  component::DescStatus status_{component::kStatusUndecided};
 };
 
 }  // namespace dbgroup::atomic::mwcas

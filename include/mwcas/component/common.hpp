@@ -21,16 +21,17 @@
 
 #include "../utility.hpp"
 
-namespace dbgroup::atomic::mwcas::component {
+namespace dbgroup::atomic::mwcas::component
+{
 /*######################################################################################
  * Global enum and constants
  *####################################################################################*/
 
 enum DescStatus {
-    kStatusUndecided,
-    kStatusSucceeded,
-    kStatusFailed,
-    kStatusFinished
+  kStatusUndecided,
+  kStatusSucceeded,
+  kStatusFailed,
+  kStatusFinished
 };
 
 /// Assumes that the length of one word is 8 bytes
@@ -50,14 +51,12 @@ constexpr size_t kCacheLineSize = 64;
  */
 template <class T>
 union CASTargetConverter {
-    const T target_data;
-    const uint64_t converted_data;
+  const T target_data;
+  const uint64_t converted_data;
 
-    explicit constexpr CASTargetConverter(const uint64_t converted)
-        : converted_data{converted} {}
+  explicit constexpr CASTargetConverter(const uint64_t converted) : converted_data{converted} {}
 
-    explicit constexpr CASTargetConverter(const T target)
-        : target_data{target} {}
+  explicit constexpr CASTargetConverter(const T target) : target_data{target} {}
 };
 
 /**
@@ -66,11 +65,10 @@ union CASTargetConverter {
  */
 template <>
 union CASTargetConverter<uint64_t> {
-    const uint64_t target_data;
-    const uint64_t converted_data;
+  const uint64_t target_data;
+  const uint64_t converted_data;
 
-    explicit constexpr CASTargetConverter(const uint64_t target)
-        : target_data{target} {}
+  explicit constexpr CASTargetConverter(const uint64_t target) : target_data{target} {}
 };
 
 }  // namespace dbgroup::atomic::mwcas::component

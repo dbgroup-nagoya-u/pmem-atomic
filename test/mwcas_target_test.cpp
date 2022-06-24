@@ -19,82 +19,90 @@
 #include "common.hpp"
 #include "gtest/gtest.h"
 
-namespace dbgroup::atomic::mwcas::component::test {
+namespace dbgroup::atomic::mwcas::component::test
+{
 template <class Target>
-class MwCASTargetFixture : public ::testing::Test {
-   protected:
-    /*####################################################################################
-     * Setup/Teardown
-     *##################################################################################*/
+class MwCASTargetFixture : public ::testing::Test
+{
+ protected:
+  /*####################################################################################
+   * Setup/Teardown
+   *##################################################################################*/
 
-    void SetUp() override {
-        if constexpr (std::is_same_v<Target, uint64_t *>) {
-            old_val_ = new uint64_t{1};
-            new_val_ = new uint64_t{2};
-        } else {
-            old_val_ = 1;
-            new_val_ = 2;
-        }
-        target_ = old_val_;
+  void
+  SetUp() override
+  {
+    if constexpr (std::is_same_v<Target, uint64_t *>) {
+      old_val_ = new uint64_t{1};
+      new_val_ = new uint64_t{2};
+    } else {
+      old_val_ = 1;
+      new_val_ = 2;
+    }
+    target_ = old_val_;
 
-        mwcas_target_ = MwCASTarget{&target_, old_val_, new_val_};
-        desc_ = MwCASField{0UL, true};
+    mwcas_target_ = MwCASTarget{&target_, old_val_, new_val_};
+    desc_ = MwCASField{0UL, true};
+  }
+
+  void
+  TearDown() override
+  {
+    if constexpr (std::is_same_v<Target, uint64_t *>) {
+      delete old_val_;
+      delete new_val_;
+    }
+  }
+
+  /*####################################################################################
+   * Functions for verification
+   *##################################################################################*/
+
+  void
+  VerifyEmbedDescriptor(const bool expect_fail)
+  {
+    if (expect_fail) {
+      target_ = new_val_;
     }
 
-    void TearDown() override {
-        if constexpr (std::is_same_v<Target, uint64_t *>) {
-            delete old_val_;
-            delete new_val_;
-        }
-    }
+    const bool result = mwcas_target_.EmbedDescriptor(desc_);
 
-    /*####################################################################################
-     * Functions for verification
-     *##################################################################################*/
-
-    void VerifyEmbedDescriptor(const bool expect_fail) {
-        if (expect_fail) {
-            target_ = new_val_;
-        }
-
-        const bool result = mwcas_target_.EmbedDescriptor(desc_);
-
-        if (expect_fail) {
-            EXPECT_FALSE(result);
-            EXPECT_NE(
-                CASTargetConverter<MwCASField>{desc_}.converted_data,  // NOLINT
+    if (expect_fail) {
+      EXPECT_FALSE(result);
+      EXPECT_NE(CASTargetConverter<MwCASField>{desc_}.converted_data,  // NOLINT
                 CASTargetConverter<Target>{target_}.converted_data);   // NOLINT
-        } else {
-            EXPECT_TRUE(result);
-            EXPECT_EQ(
-                CASTargetConverter<MwCASField>{desc_}.converted_data,  // NOLINT
+    } else {
+      EXPECT_TRUE(result);
+      EXPECT_EQ(CASTargetConverter<MwCASField>{desc_}.converted_data,  // NOLINT
                 CASTargetConverter<Target>{target_}.converted_data);   // NOLINT
-        }
     }
+  }
 
-    void VerifyCompleteMwCAS(const DescStatus st) {
-        ASSERT_TRUE(mwcas_target_.EmbedDescriptor(desc_));
+  void
+  VerifyCompleteMwCAS(const DescStatus st)
+  {
+    ASSERT_TRUE(mwcas_target_.EmbedDescriptor(desc_));
 
-        mwcas_target_.CompleteMwCAS(st);
+    mwcas_target_.CompleteMwCAS(st);
 
-        if (st == component::kStatusSucceeded) {
-            EXPECT_EQ(new_val_, target_);
-        } else {
-            EXPECT_EQ(old_val_, target_);
-        }
+    if (st == component::kStatusSucceeded) {
+      EXPECT_EQ(new_val_, target_);
+    } else {
+      EXPECT_EQ(old_val_, target_);
     }
+  }
 
-   private:
-    /*####################################################################################
-     * Internal member variables
-     *##################################################################################*/
+ private:
+  /*####################################################################################
+   * Internal member variables
+   *##################################################################################*/
 
-    MwCASTarget mwcas_target_;
-    MwCASField desc_;
+  MwCASTarget mwcas_target_;
+  MwCASField desc_;
 
-    Target target_{};
-    Target old_val_{};
-    Target new_val_{};
+  Target target_{};
+  Target old_val_{};
+  Target new_val_{};
 };
 
 /*######################################################################################
@@ -108,24 +116,24 @@ TYPED_TEST_SUITE(MwCASTargetFixture, Targets);
  * Unit test definitions
  *####################################################################################*/
 
-TYPED_TEST(MwCASTargetFixture,
-           EmbedDescriptorWithExpectedValueSucceedEmbedding) {
-    TestFixture::VerifyEmbedDescriptor(false);
+TYPED_TEST(MwCASTargetFixture, EmbedDescriptorWithExpectedValueSucceedEmbedding)
+{
+  TestFixture::VerifyEmbedDescriptor(false);
 }
 
-TYPED_TEST(MwCASTargetFixture,
-           EmbedDescriptorWithUnexpectedValueFailEmbedding) {
-    TestFixture::VerifyEmbedDescriptor(true);
+TYPED_TEST(MwCASTargetFixture, EmbedDescriptorWithUnexpectedValueFailEmbedding)
+{
+  TestFixture::VerifyEmbedDescriptor(true);
 }
 
-TYPED_TEST(MwCASTargetFixture,
-           CompleteMwCASWithSucceededStatusUpdateToDesiredValue) {
-    TestFixture::VerifyCompleteMwCAS(component::kStatusSucceeded);
+TYPED_TEST(MwCASTargetFixture, CompleteMwCASWithSucceededStatusUpdateToDesiredValue)
+{
+  TestFixture::VerifyCompleteMwCAS(component::kStatusSucceeded);
 }
 
-TYPED_TEST(MwCASTargetFixture,
-           CompleteMwCASWithFailedStatusRevertToExpectedValue) {
-    TestFixture::VerifyCompleteMwCAS(component::kStatusFailed);
+TYPED_TEST(MwCASTargetFixture, CompleteMwCASWithFailedStatusRevertToExpectedValue)
+{
+  TestFixture::VerifyCompleteMwCAS(component::kStatusFailed);
 }
 
 }  // namespace dbgroup::atomic::mwcas::component::test
