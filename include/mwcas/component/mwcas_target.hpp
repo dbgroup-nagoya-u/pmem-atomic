@@ -107,16 +107,9 @@ class MwCASTarget
    * @param mwcas_success a flag to indicate a target will be updated or reverted.
    */
   void
-  CompleteMwCAS(const DescStatus st)
+  CompleteMwCAS(const bool succeeded)
   {
-    MwCASField desired;
-
-    if (st == kStatusSucceeded) {
-      desired = new_val_;
-    } else {
-      desired = old_val_;
-    }
-
+    const MwCASField desired = (succeeded) ? new_val_ : old_val_;
     addr_->store(desired, std::memory_order_relaxed);
   }
 
