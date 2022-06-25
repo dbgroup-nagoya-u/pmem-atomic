@@ -28,10 +28,10 @@ namespace dbgroup::atomic::mwcas::component
  *####################################################################################*/
 
 enum DescStatus {
-  kStatusUndecided,
-  kStatusSucceeded,
-  kStatusFailed,
-  kStatusFinished
+  kUndecided,
+  kSucceeded,
+  kFailed,
+  kFinished
 };
 
 /// Assumes that the length of one word is 8 bytes

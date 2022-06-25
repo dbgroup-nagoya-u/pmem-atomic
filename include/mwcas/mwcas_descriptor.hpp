@@ -144,7 +144,7 @@ class alignas(component::kCacheLineSize) MwCASDescriptor
     const MwCASField desc_addr{this, true};
 
     // initialize MwCAS status
-    status_ = component::kStatusUndecided;
+    status_ = component::kUndecided;
     auto succeeded = true;
 
     // serialize MwCAS operations by embedding a descriptor
@@ -158,14 +158,14 @@ class alignas(component::kCacheLineSize) MwCASDescriptor
       }
     }
 
-    status_ = (succeeded) ? component::kStatusSucceeded : component::kStatusFailed;
+    status_ = (succeeded) ? component::kSucceeded : component::kFailed;
 
     // complete MwCAS
     for (size_t i = 0; i < embedded_count; ++i) {
       targets_[i].CompleteMwCAS(succeeded);
     }
 
-    status_ = component::kStatusFinished;
+    status_ = component::kFinished;
 
     return succeeded;
   }
@@ -181,7 +181,7 @@ class alignas(component::kCacheLineSize) MwCASDescriptor
   /// The number of registered MwCAS targets
   size_t target_count_{0};
 
-  component::DescStatus status_{component::kStatusFinished};
+  component::DescStatus status_{component::kFinished};
 };
 
 }  // namespace dbgroup::atomic::mwcas
