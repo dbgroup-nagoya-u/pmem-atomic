@@ -128,12 +128,12 @@ TYPED_TEST(MwCASTargetFixture, EmbedDescriptorWithUnexpectedValueFailEmbedding)
 
 TYPED_TEST(MwCASTargetFixture, CompleteMwCASWithSucceededStatusUpdateToDesiredValue)
 {
-  TestFixture::VerifyCompleteMwCAS(component::kStatusSucceeded);
+  TestFixture::VerifyCompleteMwCAS(true);
 }
 
 TYPED_TEST(MwCASTargetFixture, CompleteMwCASWithFailedStatusRevertToExpectedValue)
 {
-  TestFixture::VerifyCompleteMwCAS(component::kStatusFailed);
+  TestFixture::VerifyCompleteMwCAS(false);
 }
 
 }  // namespace dbgroup::atomic::mwcas::component::test
