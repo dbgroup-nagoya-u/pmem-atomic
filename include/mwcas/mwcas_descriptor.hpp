@@ -84,8 +84,8 @@ class alignas(component::kCacheLineSize) MwCASDescriptor
 
   /**
    * @brief Read a value from a given memory address.
-   * \e NOTE: if a memory address is included in MwCAS target fields, it must
-   * be read via this function.
+   * \e NOTE: if a memory address is included in MwCAS target fields, it must be read
+   * via this function.
    *
    * @tparam T an expected class of a target field
    * @param addr a target memory address to read
