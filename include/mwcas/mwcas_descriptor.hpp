@@ -143,27 +143,28 @@ class alignas(component::kCacheLineSize) MwCASDescriptor
   {
     const MwCASField desc_addr{this, true};
 
+    // initialize MwCAS status
+    status_ = component::kStatusUndecided;
+    auto succeeded = true;
+
     // serialize MwCAS operations by embedding a descriptor
     size_t embedded_count = 0;
 
     for (size_t i = 0; i < target_count_; ++i, ++embedded_count) {
       if (!targets_[i].EmbedDescriptor(desc_addr)) {
         // if a target field has been already updated, MwCAS fails
-        status_ = component::kStatusFailed;
+        succeeded = false;
         break;
       }
     }
 
-    if (status_ == component::kStatusUndecided) {
-      status_ = component::kStatusSucceeded;
-    }
+    status_ = (succeeded) ? component::kStatusSucceeded : component::kStatusFailed;
 
     // complete MwCAS
     for (size_t i = 0; i < embedded_count; ++i) {
-      targets_[i].CompleteMwCAS(status_);
+      targets_[i].CompleteMwCAS(succeeded);
     }
 
-    bool succeeded = status_ == component::kStatusSucceeded;
     status_ = component::kStatusFinished;
 
     return succeeded;
