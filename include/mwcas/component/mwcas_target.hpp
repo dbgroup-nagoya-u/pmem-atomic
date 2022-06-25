@@ -77,8 +77,7 @@ class MwCASTarget
    *##################################################################################*/
 
   /**
-   * @brief Embed a descriptor into this target address to linearlize MwCAS
-   * operations.
+   * @brief Embed a descriptor into this target address to linearlize MwCAS operations.
    *
    * @param desc_addr a memory address of a target descriptor.
    * @retval true if the descriptor address is successfully embedded.
