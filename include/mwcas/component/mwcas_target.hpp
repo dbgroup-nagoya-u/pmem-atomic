@@ -104,8 +104,7 @@ class MwCASTarget
    * @brief Update/revert a value of this target address.
    *
    * @param desc_addr an embedded descriptor in this target address.
-   * @param mwcas_success a flag to indicate a target will be updated or
-   * reverted.
+   * @param mwcas_success a flag to indicate a target will be updated or reverted.
    */
   void
   CompleteMwCAS(const DescStatus st)
