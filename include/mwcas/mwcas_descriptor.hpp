@@ -181,7 +181,7 @@ class alignas(component::kCacheLineSize) MwCASDescriptor
   /// The number of registered MwCAS targets
   size_t target_count_{0};
 
-  component::DescStatus status_{component::kStatusUndecided};
+  component::DescStatus status_{component::kStatusFinished};
 };
 
 }  // namespace dbgroup::atomic::mwcas
