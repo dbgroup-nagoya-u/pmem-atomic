@@ -109,7 +109,7 @@ class MwCASTarget
   void
   CompleteMwCAS(const bool succeeded)
   {
-    const MwCASField desired = (succeeded) ? new_val_ : old_val_;
+    const auto desired = (succeeded) ? new_val_ : old_val_;
     addr_->store(desired, std::memory_order_relaxed);
   }
 
