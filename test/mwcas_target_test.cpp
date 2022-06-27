@@ -79,13 +79,13 @@ class MwCASTargetFixture : public ::testing::Test
   }
 
   void
-  VerifyCompleteMwCAS(const bool mwcas_success)
+  VerifyCompleteMwCAS(const bool succeeded)
   {
     ASSERT_TRUE(mwcas_target_.EmbedDescriptor(desc_));
 
-    mwcas_target_.CompleteMwCAS(mwcas_success);
+    mwcas_target_.CompleteMwCAS(succeeded);
 
-    if (mwcas_success) {
+    if (succeeded) {
       EXPECT_EQ(new_val_, target_);
     } else {
       EXPECT_EQ(old_val_, target_);

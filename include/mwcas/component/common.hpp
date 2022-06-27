@@ -27,6 +27,13 @@ namespace dbgroup::atomic::mwcas::component
  * Global enum and constants
  *####################################################################################*/
 
+enum DescStatus {
+  kUndecided,
+  kSucceeded,
+  kFailed,
+  kFinished
+};
+
 /// Assumes that the length of one word is 8 bytes
 constexpr size_t kWordSize = 8;
 
