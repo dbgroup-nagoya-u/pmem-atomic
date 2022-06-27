@@ -54,6 +54,7 @@
     "ctest",
     "DCMAKE",
     "DMWCAS",
+    "DPMWCAS",
     "endl",
     "gtest",
     "IEICE",
