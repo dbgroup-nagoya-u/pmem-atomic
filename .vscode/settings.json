@@ -63,6 +63,7 @@
     "KAKENHI",
     "linearlize",
     "mwcas",
+    "pmwcas",
     "NCAS",
     "NOLINT",
     "pthread",
