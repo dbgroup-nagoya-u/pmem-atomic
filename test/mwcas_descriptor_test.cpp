@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#include "mwcas/mwcas_descriptor.hpp"
-
 #include <future>
 #include <mutex>
 #include <random>
@@ -26,10 +24,11 @@
 
 #include "common.hpp"
 #include "gtest/gtest.h"
+#include "pmwcas/pmwcas_descriptor.hpp"
 
-namespace dbgroup::atomic::mwcas::test
+namespace dbgroup::atomic::pmwcas::test
 {
-class MwCASDescriptorFixture : public ::testing::Test
+class PMwCASDescriptorFixture : public ::testing::Test
 {
  protected:
   /*####################################################################################
@@ -54,9 +53,9 @@ class MwCASDescriptorFixture : public ::testing::Test
    *##################################################################################*/
 
   void
-  VerifyMwCAS(const size_t thread_num)
+  VerifyPMwCAS(const size_t thread_num)
   {
-    RunMwCAS(thread_num);
+    RunPMwCAS(thread_num);
 
     // check the target fields are correctly incremented
     size_t sum = 0;
@@ -64,7 +63,7 @@ class MwCASDescriptorFixture : public ::testing::Test
       sum += target;
     }
 
-    EXPECT_EQ(kExecNum * thread_num * kMwCASCapacity, sum);
+    EXPECT_EQ(kExecNum * thread_num * kPMwCASCapacity, sum);
   }
 
  private:
@@ -73,7 +72,7 @@ class MwCASDescriptorFixture : public ::testing::Test
    *##################################################################################*/
 
   static constexpr size_t kExecNum = 1e6;
-  static constexpr size_t kTargetFieldNum = kMwCASCapacity * kThreadNum;
+  static constexpr size_t kTargetFieldNum = kPMwCASCapacity * kThreadNum;
   static constexpr size_t kRandomSeed = 20;
 
   /*####################################################################################
@@ -81,14 +80,14 @@ class MwCASDescriptorFixture : public ::testing::Test
    *##################################################################################*/
 
   using Target = uint64_t;
-  using MwCASTargets = std::vector<size_t>;
+  using PMwCASTargets = std::vector<size_t>;
 
   /*####################################################################################
    * Internal utility functions
    *##################################################################################*/
 
   void
-  RunMwCAS(const size_t thread_num)
+  RunPMwCAS(const size_t thread_num)
   {
     std::vector<std::thread> threads;
 
@@ -99,7 +98,7 @@ class MwCASDescriptorFixture : public ::testing::Test
       std::mt19937_64 rand_engine(kRandomSeed);
       for (size_t i = 0; i < thread_num; ++i) {
         const auto rand_seed = rand_engine();
-        threads.emplace_back(&MwCASDescriptorFixture::MwCASRandomly, this, rand_seed);
+        threads.emplace_back(&PMwCASDescriptorFixture::PMwCASRandomly, this, rand_seed);
       }
 
       // wait for all workers to finish initialization
@@ -112,9 +111,9 @@ class MwCASDescriptorFixture : public ::testing::Test
   }
 
   void
-  MwCASRandomly(const size_t rand_seed)
+  PMwCASRandomly(const size_t rand_seed)
   {
-    std::vector<MwCASTargets> operations;
+    std::vector<PMwCASTargets> operations;
     operations.reserve(kExecNum);
 
     {  // create a lock to prevent a main thread
@@ -123,10 +122,10 @@ class MwCASDescriptorFixture : public ::testing::Test
       // prepare operations to be executed
       std::mt19937_64 rand_engine{rand_seed};
       for (size_t i = 0; i < kExecNum; ++i) {
-        // select MwCAS target fields randomly
-        MwCASTargets targets;
-        targets.reserve(kMwCASCapacity);
-        while (targets.size() < kMwCASCapacity) {
+        // select PMwCAS target fields randomly
+        PMwCASTargets targets;
+        targets.reserve(kPMwCASCapacity);
+        while (targets.size() < kPMwCASCapacity) {
           size_t idx = id_dist_(rand_engine);
           const auto iter = std::find(targets.begin(), targets.end(), idx);
           if (iter == targets.end()) {
@@ -144,19 +143,19 @@ class MwCASDescriptorFixture : public ::testing::Test
       const std::shared_lock<std::shared_mutex> lock{worker_lock_};
 
       for (auto &&targets : operations) {
-        // retry until MwCAS succeeds
+        // retry until PMwCAS succeeds
         while (true) {
-          // register MwCAS targets
-          MwCASDescriptor desc{};
+          // register PMwCAS targets
+          PMwCASDescriptor desc{};
           for (auto &&idx : targets) {
             auto *addr = &(target_fields_[idx]);
-            const auto cur_val = MwCASDescriptor::Read<Target>(addr);
+            const auto cur_val = PMwCASDescriptor::Read<Target>(addr);
             const auto new_val = cur_val + 1;
-            desc.AddMwCASTarget(addr, cur_val, new_val);
+            desc.AddPMwCASTarget(addr, cur_val, new_val);
           }
 
-          // perform MwCAS
-          if (desc.MwCAS()) break;
+          // perform PMwCAS
+          if (desc.PMwCAS()) break;
         }
       }
     }
@@ -168,7 +167,7 @@ class MwCASDescriptorFixture : public ::testing::Test
 
   Target target_fields_[kTargetFieldNum]{};
 
-  std::uniform_int_distribution<size_t> id_dist_{0, kMwCASCapacity - 1};
+  std::uniform_int_distribution<size_t> id_dist_{0, kPMwCASCapacity - 1};
 
   std::shared_mutex main_lock_;
   std::shared_mutex worker_lock_;
@@ -178,14 +177,14 @@ class MwCASDescriptorFixture : public ::testing::Test
  * Unit test definitions
  *####################################################################################*/
 
-TEST_F(MwCASDescriptorFixture, MwCASWithSingleThreadCorrectlyIncrementTargets)
+TEST_F(PMwCASDescriptorFixture, PMwCASWithSingleThreadCorrectlyIncrementTargets)
 {  //
-  VerifyMwCAS(1);
+  VerifyPMwCAS(1);
 }
 
-TEST_F(MwCASDescriptorFixture, MwCASWithMultiThreadsCorrectlyIncrementTargets)
+TEST_F(PMwCASDescriptorFixture, PMwCASWithMultiThreadsCorrectlyIncrementTargets)
 {
-  VerifyMwCAS(kThreadNum);
+  VerifyPMwCAS(kThreadNum);
 }
 
-}  // namespace dbgroup::atomic::mwcas::test
+}  // namespace dbgroup::atomic::pmwcas::test

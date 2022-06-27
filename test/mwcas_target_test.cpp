@@ -14,15 +14,14 @@
  * limitations under the License.
  */
 
-#include "mwcas/component/mwcas_target.hpp"
-
 #include "common.hpp"
 #include "gtest/gtest.h"
+#include "pmwcas/component/pmwcas_target.hpp"
 
-namespace dbgroup::atomic::mwcas::component::test
+namespace dbgroup::atomic::pmwcas::component::test
 {
 template <class Target>
-class MwCASTargetFixture : public ::testing::Test
+class PMwCASTargetFixture : public ::testing::Test
 {
  protected:
   /*####################################################################################
@@ -41,8 +40,8 @@ class MwCASTargetFixture : public ::testing::Test
     }
     target_ = old_val_;
 
-    mwcas_target_ = MwCASTarget{&target_, old_val_, new_val_};
-    desc_ = MwCASField{0UL, true};
+    pmwcas_target_ = PMwCASTarget{&target_, old_val_, new_val_};
+    desc_ = PMwCASField{0UL, true};
   }
 
   void
@@ -65,25 +64,25 @@ class MwCASTargetFixture : public ::testing::Test
       target_ = new_val_;
     }
 
-    const bool result = mwcas_target_.EmbedDescriptor(desc_);
+    const bool result = pmwcas_target_.EmbedDescriptor(desc_);
 
     if (expect_fail) {
       EXPECT_FALSE(result);
-      EXPECT_NE(CASTargetConverter<MwCASField>{desc_}.converted_data,  // NOLINT
-                CASTargetConverter<Target>{target_}.converted_data);   // NOLINT
+      EXPECT_NE(CASTargetConverter<PMwCASField>{desc_}.converted_data,  // NOLINT
+                CASTargetConverter<Target>{target_}.converted_data);    // NOLINT
     } else {
       EXPECT_TRUE(result);
-      EXPECT_EQ(CASTargetConverter<MwCASField>{desc_}.converted_data,  // NOLINT
-                CASTargetConverter<Target>{target_}.converted_data);   // NOLINT
+      EXPECT_EQ(CASTargetConverter<PMwCASField>{desc_}.converted_data,  // NOLINT
+                CASTargetConverter<Target>{target_}.converted_data);    // NOLINT
     }
   }
 
   void
-  VerifyCompleteMwCAS(const bool succeeded)
+  VerifyCompletePMwCAS(const bool succeeded)
   {
-    ASSERT_TRUE(mwcas_target_.EmbedDescriptor(desc_));
+    ASSERT_TRUE(pmwcas_target_.EmbedDescriptor(desc_));
 
-    mwcas_target_.CompleteMwCAS(succeeded);
+    pmwcas_target_.CompletePMwCAS(succeeded);
 
     if (succeeded) {
       EXPECT_EQ(new_val_, target_);
@@ -97,8 +96,8 @@ class MwCASTargetFixture : public ::testing::Test
    * Internal member variables
    *##################################################################################*/
 
-  MwCASTarget mwcas_target_;
-  MwCASField desc_;
+  PMwCASTarget pmwcas_target_;
+  PMwCASField desc_;
 
   Target target_{};
   Target old_val_{};
@@ -110,30 +109,30 @@ class MwCASTargetFixture : public ::testing::Test
  *####################################################################################*/
 
 using Targets = ::testing::Types<uint64_t, uint64_t *, MyClass>;
-TYPED_TEST_SUITE(MwCASTargetFixture, Targets);
+TYPED_TEST_SUITE(PMwCASTargetFixture, Targets);
 
 /*######################################################################################
  * Unit test definitions
  *####################################################################################*/
 
-TYPED_TEST(MwCASTargetFixture, EmbedDescriptorWithExpectedValueSucceedEmbedding)
+TYPED_TEST(PMwCASTargetFixture, EmbedDescriptorWithExpectedValueSucceedEmbedding)
 {
   TestFixture::VerifyEmbedDescriptor(false);
 }
 
-TYPED_TEST(MwCASTargetFixture, EmbedDescriptorWithUnexpectedValueFailEmbedding)
+TYPED_TEST(PMwCASTargetFixture, EmbedDescriptorWithUnexpectedValueFailEmbedding)
 {
   TestFixture::VerifyEmbedDescriptor(true);
 }
 
-TYPED_TEST(MwCASTargetFixture, CompleteMwCASWithSucceededStatusUpdateToDesiredValue)
+TYPED_TEST(PMwCASTargetFixture, CompletePMwCASWithSucceededStatusUpdateToDesiredValue)
 {
-  TestFixture::VerifyCompleteMwCAS(true);
+  TestFixture::VerifyCompletePMwCAS(true);
 }
 
-TYPED_TEST(MwCASTargetFixture, CompleteMwCASWithFailedStatusRevertToExpectedValue)
+TYPED_TEST(PMwCASTargetFixture, CompletePMwCASWithFailedStatusRevertToExpectedValue)
 {
-  TestFixture::VerifyCompleteMwCAS(false);
+  TestFixture::VerifyCompletePMwCAS(false);
 }
 
-}  // namespace dbgroup::atomic::mwcas::component::test
+}  // namespace dbgroup::atomic::pmwcas::component::test
