@@ -14,29 +14,29 @@
  * limitations under the License.
  */
 
-#ifndef MWCAS_MWCAS_DESCRIPTOR_HPP
-#define MWCAS_MWCAS_DESCRIPTOR_HPP
+#ifndef PMWCAS_PMWCAS_DESCRIPTOR_HPP
+#define PMWCAS_PMWCAS_DESCRIPTOR_HPP
 
 #include <array>
 #include <atomic>
 #include <utility>
 
-#include "component/mwcas_target.hpp"
+#include "component/pmwcas_target.hpp"
 
-namespace dbgroup::atomic::mwcas
+namespace dbgroup::atomic::pmwcas
 {
 /**
- * @brief A class to manage a MwCAS (multi-words compare-and-swap) operation.
+ * @brief A class to manage a PMwCAS (multi-words compare-and-swap) operation.
  *
  */
-class alignas(component::kCacheLineSize) MwCASDescriptor
+class alignas(component::kCacheLineSize) PMwCASDescriptor
 {
   /*####################################################################################
    * Type aliases
    *##################################################################################*/
 
-  using MwCASTarget = component::MwCASTarget;
-  using MwCASField = component::MwCASField;
+  using PMwCASTarget = component::PMwCASTarget;
+  using PMwCASField = component::PMwCASField;
 
  public:
   /*####################################################################################
@@ -44,32 +44,32 @@ class alignas(component::kCacheLineSize) MwCASDescriptor
    *##################################################################################*/
 
   /**
-   * @brief Construct an empty descriptor for MwCAS operations.
+   * @brief Construct an empty descriptor for PMwCAS operations.
    *
    */
-  constexpr MwCASDescriptor() = default;
+  constexpr PMwCASDescriptor() = default;
 
-  constexpr MwCASDescriptor(const MwCASDescriptor &) = default;
-  constexpr auto operator=(const MwCASDescriptor &obj) -> MwCASDescriptor & = default;
-  constexpr MwCASDescriptor(MwCASDescriptor &&) = default;
-  constexpr auto operator=(MwCASDescriptor &&) -> MwCASDescriptor & = default;
+  constexpr PMwCASDescriptor(const PMwCASDescriptor &) = default;
+  constexpr auto operator=(const PMwCASDescriptor &obj) -> PMwCASDescriptor & = default;
+  constexpr PMwCASDescriptor(PMwCASDescriptor &&) = default;
+  constexpr auto operator=(PMwCASDescriptor &&) -> PMwCASDescriptor & = default;
 
   /*####################################################################################
    * Public destructors
    *##################################################################################*/
 
   /**
-   * @brief Destroy the MwCASDescriptor object.
+   * @brief Destroy the PMwCASDescriptor object.
    *
    */
-  ~MwCASDescriptor() = default;
+  ~PMwCASDescriptor() = default;
 
   /*####################################################################################
    * Public getters/setters
    *##################################################################################*/
 
   /**
-   * @return the number of registered MwCAS targets
+   * @return the number of registered PMwCAS targets
    */
   [[nodiscard]] constexpr auto
   Size() const  //
@@ -84,7 +84,7 @@ class alignas(component::kCacheLineSize) MwCASDescriptor
 
   /**
    * @brief Read a value from a given memory address.
-   * \e NOTE: if a memory address is included in MwCAS target fields, it must be read
+   * \e NOTE: if a memory address is included in PMwCAS target fields, it must be read
    * via this function.
    *
    * @tparam T an expected class of a target field
@@ -96,12 +96,12 @@ class alignas(component::kCacheLineSize) MwCASDescriptor
   Read(const void *addr)  //
       -> T
   {
-    const auto *target_addr = static_cast<const std::atomic<MwCASField> *>(addr);
+    const auto *target_addr = static_cast<const std::atomic<PMwCASField> *>(addr);
 
-    MwCASField target_word{};
+    PMwCASField target_word{};
     while (true) {
       target_word = target_addr->load(std::memory_order_relaxed);
-      if (!target_word.IsMwCASDescriptor()) break;
+      if (!target_word.IsPMwCASDescriptor()) break;
       SPINLOCK_HINT
     }
 
@@ -109,7 +109,7 @@ class alignas(component::kCacheLineSize) MwCASDescriptor
   }
 
   /**
-   * @brief Add a new MwCAS target to this descriptor.
+   * @brief Add a new PMwCAS target to this descriptor.
    *
    * @tparam T a class of a target
    * @param addr a target memory address
@@ -120,41 +120,41 @@ class alignas(component::kCacheLineSize) MwCASDescriptor
    */
   template <class T>
   constexpr auto
-  AddMwCASTarget(  //
+  AddPMwCASTarget(  //
       void *addr,
       const T old_val,
       const T new_val)  //
       -> bool
   {
-    if (target_count_ == kMwCASCapacity) {
+    if (target_count_ == kPMwCASCapacity) {
       return false;
     }
-    targets_[target_count_++] = MwCASTarget{addr, old_val, new_val};
+    targets_[target_count_++] = PMwCASTarget{addr, old_val, new_val};
     return true;
   }
 
   /**
-   * @brief Perform a MwCAS operation by using registered targets.
+   * @brief Perform a PMwCAS operation by using registered targets.
    *
-   * @retval true if a MwCAS operation succeeds
-   * @retval false if a MwCAS operation fails
+   * @retval true if a PMwCAS operation succeeds
+   * @retval false if a PMwCAS operation fails
    */
   auto
-  MwCAS()  //
+  PMwCAS()  //
       -> bool
   {
-    const MwCASField desc_addr{this, true};
+    const PMwCASField desc_addr{this, true};
 
-    // initialize MwCAS status
+    // initialize PMwCAS status
     status_ = component::kUndecided;
     auto succeeded = true;
 
-    // serialize MwCAS operations by embedding a descriptor
+    // serialize PMwCAS operations by embedding a descriptor
     size_t embedded_count = 0;
 
     for (size_t i = 0; i < target_count_; ++i, ++embedded_count) {
       if (!targets_[i].EmbedDescriptor(desc_addr)) {
-        // if a target field has been already updated, MwCAS fails
+        // if a target field has been already updated, PMwCAS fails
         succeeded = false;
         break;
       }
@@ -162,9 +162,9 @@ class alignas(component::kCacheLineSize) MwCASDescriptor
 
     status_ = (succeeded) ? component::kSucceeded : component::kFailed;
 
-    // complete MwCAS
+    // complete PMwCAS
     for (size_t i = 0; i < embedded_count; ++i) {
-      targets_[i].CompleteMwCAS(succeeded);
+      targets_[i].CompletePMwCAS(succeeded);
     }
 
     status_ = component::kFinished;
@@ -177,15 +177,15 @@ class alignas(component::kCacheLineSize) MwCASDescriptor
    * Internal member variables
    *##################################################################################*/
 
-  /// Target entries of MwCAS
-  MwCASTarget targets_[kMwCASCapacity];
+  /// Target entries of PMwCAS
+  PMwCASTarget targets_[kPMwCASCapacity];
 
-  /// The number of registered MwCAS targets
+  /// The number of registered PMwCAS targets
   size_t target_count_{0};
 
   component::DescStatus status_{component::kFinished};
 };
 
-}  // namespace dbgroup::atomic::mwcas
+}  // namespace dbgroup::atomic::pmwcas
 
-#endif  // MWCAS_MWCAS_DESCRIPTOR_HPP
+#endif  // PMWCAS_PMWCAS_DESCRIPTOR_HPP

@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-#ifndef MWCAS_COMPONENT_COMMON_HPP
-#define MWCAS_COMPONENT_COMMON_HPP
+#ifndef PMWCAS_COMPONENT_COMMON_HPP
+#define PMWCAS_COMPONENT_COMMON_HPP
 
 #ifndef SPINLOCK_HINT
-#ifdef MWCAS_HAS_SPINLOCK_HINT
+#ifdef PMWCAS_HAS_SPINLOCK_HINT
 #include <xmmintrin.h>
 #define SPINLOCK_HINT _mm_pause();  // NOLINT
 #else
@@ -28,9 +28,9 @@
 
 #include <atomic>
 
-#include "../utility.hpp"
+#include "pmwcas/utility.hpp"
 
-namespace dbgroup::atomic::mwcas::component
+namespace dbgroup::atomic::pmwcas::component
 {
 /*######################################################################################
  * Global enum and constants
@@ -54,7 +54,7 @@ constexpr size_t kCacheLineSize = 64;
  *####################################################################################*/
 
 /**
- * @brief An union to convert MwCAS target data into uint64_t.
+ * @brief An union to convert PMwCAS target data into uint64_t.
  *
  * @tparam T a type of target data
  */
@@ -80,6 +80,6 @@ union CASTargetConverter<uint64_t> {
   explicit constexpr CASTargetConverter(const uint64_t target) : target_data{target} {}
 };
 
-}  // namespace dbgroup::atomic::mwcas::component
+}  // namespace dbgroup::atomic::pmwcas::component
 
-#endif  // MWCAS_COMPONENT_COMMON_HPP
+#endif  // PMWCAS_COMPONENT_COMMON_HPP

@@ -7,43 +7,43 @@ endif()
 
 # project information
 project(
-  mwcas
+  pmwcas
   VERSION "0.1.0"
-  DESCRIPTION "An open-source MwCAS library."
+  DESCRIPTION "PMwCAS library."
   LANGUAGES "CXX"
 )
 
 # define source directories
-set(MWCAS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+set(PMWCAS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 
 # check SSE support for spinlock hints
 include(CheckIncludeFileCXX)
-CHECK_INCLUDE_FILE_CXX("xmmintrin.h" MWCAS_HAS_SPINLOCK_HINT)
+CHECK_INCLUDE_FILE_CXX("xmmintrin.h" PMWCAS_HAS_SPINLOCK_HINT)
 
 #--------------------------------------------------------------------------------------#
-# BzTree configurations
+# PMwCAS configurations
 #--------------------------------------------------------------------------------------#
 
-set(MWCAS_CAPACITY "4" CACHE STRING "The maximum number of target words for MwCAS.")
+set(PMWCAS_CAPACITY "4" CACHE STRING "The maximum number of target words for PMwCAS.")
 
 #--------------------------------------------------------------------------------------#
 # Build targets
 #--------------------------------------------------------------------------------------#
 
-if(NOT TARGET mwcas::mwcas)
-  add_library(mwcas INTERFACE)
-  add_library(mwcas::mwcas ALIAS mwcas)
-  target_compile_features(mwcas INTERFACE
+if(NOT TARGET pmwcas::pmwcas)
+  add_library(pmwcas INTERFACE)
+  add_library(pmwcas::pmwcas ALIAS pmwcas)
+  target_compile_features(pmwcas INTERFACE
     "cxx_std_17"
   )
-  target_include_directories(mwcas INTERFACE
-    "${MWCAS_SOURCE_DIR}/include"
+  target_include_directories(pmwcas INTERFACE
+    "${PMWCAS_SOURCE_DIR}/include"
   )
-  target_compile_definitions(mwcas INTERFACE
-    MWCAS_CAPACITY=${MWCAS_CAPACITY}
-    $<$<BOOL:${MWCAS_HAS_SPINLOCK_HINT}>:MWCAS_HAS_SPINLOCK_HINT>
+  target_compile_definitions(pmwcas INTERFACE
+    PMWCAS_CAPACITY=${PMWCAS_CAPACITY}
+    $<$<BOOL:${PMWCAS_HAS_SPINLOCK_HINT}>:PMWCAS_HAS_SPINLOCK_HINT>
   )
-  target_link_libraries(mwcas INTERFACE
+  target_link_libraries(pmwcas INTERFACE
     pthread
   )
 endif()
@@ -52,8 +52,8 @@ endif()
 # Build Unit Tests
 #--------------------------------------------------------------------------------------#
 
-option(MWCAS_BUILD_TESTS, "Build unit tests for a MwCAS library" OFF)
-if(${MWCAS_BUILD_TESTS})
+option(PMWCAS_BUILD_TESTS, "Build unit tests for a PMwCAS library" OFF)
+if(${PMWCAS_BUILD_TESTS})
   enable_testing()
   # include unit tests
   add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/test")

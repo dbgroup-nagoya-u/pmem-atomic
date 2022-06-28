@@ -54,6 +54,7 @@
     "ctest",
     "DCMAKE",
     "DMWCAS",
+    "DPMWCAS",
     "endl",
     "gtest",
     "IEICE",
@@ -65,10 +66,12 @@
     "mwcas",
     "NCAS",
     "NOLINT",
+    "pmwcas",
     "pthread",
     "RDCSS",
     "struct",
-    "Wextra"
+    "Wextra",
+    "xmmintrin"
   ],
   "files.associations": {
     "fstream": "cpp",

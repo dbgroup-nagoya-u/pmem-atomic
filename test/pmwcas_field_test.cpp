@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-#include "mwcas/component/mwcas_field.hpp"
+#include "pmwcas/component/pmwcas_field.hpp"
 
 #include "common.hpp"
 #include "gtest/gtest.h"
 
-namespace dbgroup::atomic::mwcas::component::test
+namespace dbgroup::atomic::pmwcas::component::test
 {
 template <class Target>
-class MwCASFieldFixture : public ::testing::Test
+class PMwCASFieldFixture : public ::testing::Test
 {
  protected:
   /*####################################################################################
@@ -55,14 +55,14 @@ class MwCASFieldFixture : public ::testing::Test
    *##################################################################################*/
 
   void
-  VerifyConstructor(const bool is_mwcas_desc)
+  VerifyConstructor(const bool is_pmwcas_desc)
   {
-    const auto target_word_1 = MwCASField{data_1_, is_mwcas_desc};
+    const auto target_word_1 = PMwCASField{data_1_, is_pmwcas_desc};
 
-    if (is_mwcas_desc) {
-      EXPECT_TRUE(target_word_1.IsMwCASDescriptor());
+    if (is_pmwcas_desc) {
+      EXPECT_TRUE(target_word_1.IsPMwCASDescriptor());
     } else {
-      EXPECT_FALSE(target_word_1.IsMwCASDescriptor());
+      EXPECT_FALSE(target_word_1.IsPMwCASDescriptor());
     }
     EXPECT_EQ(data_1_, target_word_1.GetTargetData<Target>());
   }
@@ -70,34 +70,34 @@ class MwCASFieldFixture : public ::testing::Test
   void
   VerifyEQ()
   {
-    MwCASField field_a{data_1_, false};
-    MwCASField field_b{data_1_, false};
+    PMwCASField field_a{data_1_, false};
+    PMwCASField field_b{data_1_, false};
     EXPECT_TRUE(field_a == field_b);
 
-    field_b = MwCASField{data_2_, false};
+    field_b = PMwCASField{data_2_, false};
     EXPECT_FALSE(field_a == field_b);
 
-    field_a = MwCASField{data_2_, true};
+    field_a = PMwCASField{data_2_, true};
     EXPECT_FALSE(field_a == field_b);
 
-    field_b = MwCASField{data_2_, true};
+    field_b = PMwCASField{data_2_, true};
     EXPECT_TRUE(field_a == field_b);
   }
 
   void
   VerifyNE()
   {
-    MwCASField field_a{data_1_, false};
-    MwCASField field_b{data_1_, false};
+    PMwCASField field_a{data_1_, false};
+    PMwCASField field_b{data_1_, false};
     EXPECT_FALSE(field_a != field_b);
 
-    field_b = MwCASField{data_2_, false};
+    field_b = PMwCASField{data_2_, false};
     EXPECT_TRUE(field_a != field_b);
 
-    field_a = MwCASField{data_2_, true};
+    field_a = PMwCASField{data_2_, true};
     EXPECT_TRUE(field_a != field_b);
 
-    field_b = MwCASField{data_2_, true};
+    field_b = PMwCASField{data_2_, true};
     EXPECT_FALSE(field_a != field_b);
   }
 
@@ -115,30 +115,30 @@ class MwCASFieldFixture : public ::testing::Test
  *####################################################################################*/
 
 using Targets = ::testing::Types<uint64_t, uint64_t *, MyClass>;
-TYPED_TEST_SUITE(MwCASFieldFixture, Targets);
+TYPED_TEST_SUITE(PMwCASFieldFixture, Targets);
 
 /*######################################################################################
  * Unit test definitions
  *####################################################################################*/
 
-TYPED_TEST(MwCASFieldFixture, ConstructorWithoutDescriptorFlagCreateValueField)
+TYPED_TEST(PMwCASFieldFixture, ConstructorWithoutDescriptorFlagCreateValueField)
 {
   TestFixture::VerifyConstructor(false);
 }
 
-TYPED_TEST(MwCASFieldFixture, ConstructorWithDescriptorFlagCreateDescriptorField)
+TYPED_TEST(PMwCASFieldFixture, ConstructorWithDescriptorFlagCreateDescriptorField)
 {
   TestFixture::VerifyConstructor(true);
 }
 
-TYPED_TEST(MwCASFieldFixture, EQWithAllCombinationOfInstancesReturnCorrectBool)
+TYPED_TEST(PMwCASFieldFixture, EQWithAllCombinationOfInstancesReturnCorrectBool)
 {
   TestFixture::VerifyEQ();
 }
 
-TYPED_TEST(MwCASFieldFixture, NEWithAllCombinationOfInstancesReturnCorrectBool)
+TYPED_TEST(PMwCASFieldFixture, NEWithAllCombinationOfInstancesReturnCorrectBool)
 {
   TestFixture::VerifyNE();
 }
 
-}  // namespace dbgroup::atomic::mwcas::component::test
+}  // namespace dbgroup::atomic::pmwcas::component::test

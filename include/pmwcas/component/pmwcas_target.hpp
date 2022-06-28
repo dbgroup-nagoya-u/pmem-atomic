@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-#ifndef MWCAS_COMPONENT_MWCAS_TARGET_HPP
-#define MWCAS_COMPONENT_MWCAS_TARGET_HPP
+#ifndef PMWCAS_COMPONENT_PMWCAS_TARGET_HPP
+#define PMWCAS_COMPONENT_PMWCAS_TARGET_HPP
 
 #include <atomic>
 
-#include "mwcas_field.hpp"
+#include "pmwcas_field.hpp"
 
-namespace dbgroup::atomic::mwcas::component
+namespace dbgroup::atomic::pmwcas::component
 {
 /**
- * @brief A class to represent a MwCAS target.
+ * @brief A class to represent a PMwCAS target.
  *
  */
-class MwCASTarget
+class PMwCASTarget
 {
  public:
   /*####################################################################################
@@ -35,63 +35,63 @@ class MwCASTarget
    *##################################################################################*/
 
   /**
-   * @brief Construct an empty MwCAS target.
+   * @brief Construct an empty PMwCAS target.
    *
    */
-  constexpr MwCASTarget() = default;
+  constexpr PMwCASTarget() = default;
 
   /**
-   * @brief Construct a new MwCAS target based on given information.
+   * @brief Construct a new PMwCAS target based on given information.
    *
-   * @tparam T a class of MwCAS targets.
+   * @tparam T a class of PMwCAS targets.
    * @param addr a target memory address.
    * @param old_val an expected value of the target address.
    * @param new_val an desired value of the target address.
    */
   template <class T>
-  constexpr MwCASTarget(  //
+  constexpr PMwCASTarget(  //
       void *addr,
       const T old_val,
       const T new_val)
-      : addr_{static_cast<std::atomic<MwCASField> *>(addr)}, old_val_{old_val}, new_val_{new_val}
+      : addr_{static_cast<std::atomic<PMwCASField> *>(addr)}, old_val_{old_val}, new_val_{new_val}
   {
   }
 
-  constexpr MwCASTarget(const MwCASTarget &) = default;
-  constexpr auto operator=(const MwCASTarget &obj) -> MwCASTarget & = default;
-  constexpr MwCASTarget(MwCASTarget &&) = default;
-  constexpr auto operator=(MwCASTarget &&) -> MwCASTarget & = default;
+  constexpr PMwCASTarget(const PMwCASTarget &) = default;
+  constexpr auto operator=(const PMwCASTarget &obj) -> PMwCASTarget & = default;
+  constexpr PMwCASTarget(PMwCASTarget &&) = default;
+  constexpr auto operator=(PMwCASTarget &&) -> PMwCASTarget & = default;
 
   /*####################################################################################
    * Public destructor
    *##################################################################################*/
 
   /**
-   * @brief Destroy the MwCASTarget object.
+   * @brief Destroy the PMwCASTarget object.
    *
    */
-  ~MwCASTarget() = default;
+  ~PMwCASTarget() = default;
 
   /*####################################################################################
    * Public utility functions
    *##################################################################################*/
 
   /**
-   * @brief Embed a descriptor into this target address to linearlize MwCAS operations.
+   * @brief Embed a descriptor into this target address to linearlize PMwCAS operations.
    *
    * @param desc_addr a memory address of a target descriptor.
    * @retval true if the descriptor address is successfully embedded.
    * @retval false otherwise.
    */
   auto
-  EmbedDescriptor(const MwCASField desc_addr)  //
+  EmbedDescriptor(const PMwCASField desc_addr)  //
       -> bool
   {
-    MwCASField expected = old_val_;
+    PMwCASField expected = old_val_;
     while (true) {
-      // try to embed a MwCAS descriptor
+      // try to embed a PMwCAS descriptor
       addr_->compare_exchange_strong(expected, desc_addr, std::memory_order_relaxed);
-      if (!expected.IsMwCASDescriptor()) break;
+      if (!expected.IsPMwCASDescriptor()) break;
 
       // retry if another descriptor is embedded
       expected = old_val_;
@@ -104,11 +104,10 @@ class MwCASTarget
   /**
    * @brief Update/revert a value of this target address.
    *
-   * @param desc_addr an embedded descriptor in this target address.
-   * @param mwcas_success a flag to indicate a target will be updated or reverted.
+   * @param succeeded a flag to indicate a target will be updated or reverted.
    */
   void
-  CompleteMwCAS(const bool succeeded)
+  CompletePMwCAS(const bool succeeded)
   {
     const auto desired = (succeeded) ? new_val_ : old_val_;
     addr_->store(desired, std::memory_order_relaxed);
@@ -120,15 +119,15 @@ class MwCASTarget
    *##################################################################################*/
 
   /// A target memory address
-  std::atomic<MwCASField> *addr_{};
+  std::atomic<PMwCASField> *addr_{};
 
   /// An expected value of a target field
-  MwCASField old_val_{};
+  PMwCASField old_val_{};
 
   /// An inserting value into a target field
-  MwCASField new_val_{};
+  PMwCASField new_val_{};
 };
 
-}  // namespace dbgroup::atomic::mwcas::component
+}  // namespace dbgroup::atomic::pmwcas::component
 
-#endif  // MWCAS_COMPONENT_MWCAS_TARGET_HPP
+#endif  // PMWCAS_COMPONENT_PMWCAS_TARGET_HPP
