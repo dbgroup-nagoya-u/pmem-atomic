@@ -28,13 +28,8 @@ namespace dbgroup::atomic::pmwcas
  * Global enum and constants
  *####################################################################################*/
 
-#ifdef PMWCAS_CAPACITY
 /// The maximum number of target words of PMwCAS
 constexpr size_t kPMwCASCapacity = PMWCAS_CAPACITY;
-#else
-/// The maximum number of target words of PMwCAS
-constexpr size_t kPMwCASCapacity = 4;
-#endif
 
 /*######################################################################################
  * Global utility functions

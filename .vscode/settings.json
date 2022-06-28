@@ -64,13 +64,14 @@
     "KAKENHI",
     "linearlize",
     "mwcas",
-    "pmwcas",
     "NCAS",
     "NOLINT",
+    "pmwcas",
     "pthread",
     "RDCSS",
     "struct",
-    "Wextra"
+    "Wextra",
+    "xmmintrin"
   ],
   "files.associations": {
     "fstream": "cpp",

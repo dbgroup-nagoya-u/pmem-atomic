@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
+#include "pmwcas/component/pmwcas_target.hpp"
+
 #include "common.hpp"
 #include "gtest/gtest.h"
-#include "pmwcas/component/pmwcas_target.hpp"
 
 namespace dbgroup::atomic::pmwcas::component::test
 {

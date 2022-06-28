@@ -28,7 +28,7 @@
 
 #include <atomic>
 
-#include "../utility.hpp"
+#include "pmwcas/utility.hpp"
 
 namespace dbgroup::atomic::pmwcas::component
 {

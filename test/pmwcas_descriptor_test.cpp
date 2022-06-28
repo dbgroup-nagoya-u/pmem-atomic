@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "pmwcas/pmwcas_descriptor.hpp"
+
 #include <future>
 #include <mutex>
 #include <random>
@@ -24,7 +26,6 @@
 
 #include "common.hpp"
 #include "gtest/gtest.h"
-#include "pmwcas/pmwcas_descriptor.hpp"
 
 namespace dbgroup::atomic::pmwcas::test
 {

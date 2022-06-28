@@ -21,7 +21,7 @@ include(CheckIncludeFileCXX)
 CHECK_INCLUDE_FILE_CXX("xmmintrin.h" PMWCAS_HAS_SPINLOCK_HINT)
 
 #--------------------------------------------------------------------------------------#
-# BzTree configurations
+# PMwCAS configurations
 #--------------------------------------------------------------------------------------#
 
 set(PMWCAS_CAPACITY "4" CACHE STRING "The maximum number of target words for PMwCAS.")
