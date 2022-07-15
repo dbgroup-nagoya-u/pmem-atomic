@@ -11,10 +11,8 @@ namespace dbgroup::atomic::pmwcas
 
 class DescriptorPool
 {
-  using PMwCASDescriptor = component::PMwCASDescriptor;
-
  public:
-  DescriptorPool() : pool_.fill(std::make_pair(false, PMwCASDescriptor{})){};
+  DescriptorPool() { pool_.fill(std::make_pair(false, PMwCASDescriptor{})); };
 
   auto
   Get()  //
@@ -31,7 +29,7 @@ class DescriptorPool
       }
     }
 
-    // ここまできちゃったときの処理が必要？
+    return desc;
   }
 
  private:
