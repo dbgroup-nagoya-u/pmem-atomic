@@ -6,11 +6,6 @@
 namespace dbgroup::atomic::pmwcas::test
 {
 
-TEST(DescriptorPoolFixture, Check)
-{
-  DescriptorPool pool{};
-
-  PMwCASDescriptor *desc = pool.Get();
-}
+TEST(DescriptorPoolFixture, Check) { DescriptorPool pool{}; }
 
 }  // namespace dbgroup::atomic::pmwcas::test

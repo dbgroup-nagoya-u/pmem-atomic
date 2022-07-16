@@ -12,7 +12,13 @@ namespace dbgroup::atomic::pmwcas
 class DescriptorPool
 {
  public:
-  DescriptorPool() { pool_.fill(std::make_pair(false, PMwCASDescriptor{})); };
+  DescriptorPool()
+  {
+    const auto initial_data = std::make_pair(false, PMwCASDescriptor{});
+    for (auto &entry : pool_) {
+      entry = initial_data;
+    }
+  };
 
   auto
   Get()  //
@@ -33,7 +39,8 @@ class DescriptorPool
   }
 
  private:
-  std::array<std::pair<std::atomic_bool, PMwCASDescriptor>, 1024> pool_;
+  //記述子配列．長さはとりあえず定数．
+  std::pair<std::atomic_bool, PMwCASDescriptor> pool_[1024];
 };
 
 }  // namespace dbgroup::atomic::pmwcas
