@@ -26,6 +26,8 @@ CHECK_INCLUDE_FILE_CXX("xmmintrin.h" PMWCAS_HAS_SPINLOCK_HINT)
 
 set(PMWCAS_CAPACITY "4" CACHE STRING "The maximum number of target words for PMwCAS.")
 
+set(DESCRIPTOR_POOL_SIZE "48" CACHE STRING "The maximum descriptor pool size")
+
 #--------------------------------------------------------------------------------------#
 # Build targets
 #--------------------------------------------------------------------------------------#
@@ -41,6 +43,7 @@ if(NOT TARGET pmwcas::pmwcas)
   )
   target_compile_definitions(pmwcas INTERFACE
     PMWCAS_CAPACITY=${PMWCAS_CAPACITY}
+    DESCRIPTOR_POOL_SIZE=${DESCRIPTOR_POOL_SIZE}
     $<$<BOOL:${PMWCAS_HAS_SPINLOCK_HINT}>:PMWCAS_HAS_SPINLOCK_HINT>
   )
   target_link_libraries(pmwcas INTERFACE

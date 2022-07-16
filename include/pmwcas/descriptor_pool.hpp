@@ -40,7 +40,7 @@ class DescriptorPool
 
  private:
   //記述子配列．長さはとりあえず定数．
-  std::pair<std::atomic_bool, PMwCASDescriptor> pool_[1024];
+  std::pair<std::atomic_bool, PMwCASDescriptor> pool_[kDescriptorPoolSize];
 };
 
 }  // namespace dbgroup::atomic::pmwcas
