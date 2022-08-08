@@ -33,11 +33,11 @@ class DescriptorPoolFixture : public ::testing::Test
   }
 
   void
-  ExecuteInMultipleThread()
+  ExecuteInMultipleThread(const size_t pool_size)
   {
     std::vector<std::thread> threads;
 
-    for (size_t i = 0; i < kThreadNum; ++i) {
+    for (size_t i = 0; i < pool_size; ++i) {
       threads.emplace_back([&, i] {
         PMwCASDescriptor *desc = pool_.Get();
         desc_arr_[i] = desc;
@@ -51,7 +51,7 @@ class DescriptorPoolFixture : public ::testing::Test
     // 重複を削除
     std::unordered_set<PMwCASDescriptor *> distinct(std::begin(desc_arr_), std::end(desc_arr_));
 
-    EXPECT_EQ(distinct.size(), kThreadNum);
+    EXPECT_EQ(distinct.size(), pool_size);
   }
 
  private:
@@ -67,7 +67,8 @@ TEST_F(DescriptorPoolFixture, GetTwoSameDescriptorInOneThread)
 
 TEST_F(DescriptorPoolFixture, GetDifferentDescriptorsInEveryThread)
 {  //
-  ExecuteInMultipleThread();
+  auto pool_size = DESCRIPTOR_POOL_SIZE;
+  ExecuteInMultipleThread(pool_size);
 }
 
 }  // namespace dbgroup::atomic::pmwcas::test
