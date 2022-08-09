@@ -4,6 +4,7 @@
 #include <atomic>
 #include <utility>
 
+#include "element_holder.hpp"
 #include "pmwcas_descriptor.hpp"
 
 namespace dbgroup::atomic::pmwcas
@@ -14,9 +15,9 @@ class DescriptorPool
  public:
   DescriptorPool()
   {
-    const auto initial_data = std::make_pair(false, PMwCASDescriptor{});
+    const auto initial_element = std::make_pair(false, PMwCASDescriptor{});
     for (auto &entry : pool_) {
-      entry = initial_data;
+      entry = initial_element;
     }
   };
 

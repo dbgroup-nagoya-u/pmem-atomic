@@ -27,13 +27,32 @@ class DescriptorPoolFixture : public ::testing::Test
   void
   ExecuteInOneThread()
   {
-    PMwCASDescriptor *desc_1 = pool_.Get();
-    PMwCASDescriptor *desc_2 = pool_.Get();
+    PMwCASDescriptor *desc_1 = GetOneDescriptor();
+    PMwCASDescriptor *desc_2 = GetOneDescriptor();
+    std::cout << desc_1 << std::endl;
     EXPECT_EQ(desc_1, desc_2);
   }
 
   void
   ExecuteInMultipleThread(const size_t pool_size)
+  {
+    GetAllDescriptor(pool_size);
+
+    // 重複を削除
+    std::unordered_set<PMwCASDescriptor *> distinct(std::begin(desc_arr_), std::end(desc_arr_));
+    EXPECT_EQ(distinct.size(), pool_size);
+  }
+
+ private:
+  auto
+  GetOneDescriptor() -> PMwCASDescriptor *
+  {
+    PMwCASDescriptor *desc = pool_.Get();
+    return desc;
+  }
+
+  void
+  GetAllDescriptor(const size_t pool_size)
   {
     std::vector<std::thread> threads;
 
@@ -41,20 +60,15 @@ class DescriptorPoolFixture : public ::testing::Test
       threads.emplace_back([&, i] {
         PMwCASDescriptor *desc = pool_.Get();
         desc_arr_[i] = desc;
+        // std::cout << i << desc << std::endl;
       });
     }
 
     for (auto &t : threads) {
       t.join();
     }
-
-    // 重複を削除
-    std::unordered_set<PMwCASDescriptor *> distinct(std::begin(desc_arr_), std::end(desc_arr_));
-
-    EXPECT_EQ(distinct.size(), pool_size);
   }
 
- private:
   DescriptorPool pool_{};
 
   std::array<PMwCASDescriptor *, DESCRIPTOR_POOL_SIZE> desc_arr_{};
