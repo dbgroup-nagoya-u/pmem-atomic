@@ -57,7 +57,7 @@ class DescriptorPoolFixture : public ::testing::Test
  private:
   DescriptorPool pool_{};
 
-  std::array<PMwCASDescriptor *, kThreadNum> desc_arr_{};
+  std::array<PMwCASDescriptor *, DESCRIPTOR_POOL_SIZE> desc_arr_{};
 };
 
 TEST_F(DescriptorPoolFixture, GetTwoSameDescriptorInOneThread)
