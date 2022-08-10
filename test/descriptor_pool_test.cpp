@@ -29,7 +29,7 @@ class DescriptorPoolFixture : public ::testing::Test
   {
     PMwCASDescriptor *desc_1 = GetOneDescriptor();
     PMwCASDescriptor *desc_2 = GetOneDescriptor();
-    std::cout << desc_1 << std::endl;
+    // std::cout << desc_1 << std::endl;
     EXPECT_EQ(desc_1, desc_2);
   }
 
@@ -58,9 +58,9 @@ class DescriptorPoolFixture : public ::testing::Test
 
     for (size_t i = 0; i < pool_size; ++i) {
       threads.emplace_back([&, i] {
-        PMwCASDescriptor *desc = pool_.Get();
+        PMwCASDescriptor *desc = GetOneDescriptor();
         desc_arr_[i] = desc;
-        // std::cout << i << desc << std::endl;
+        std::cout << desc << std::endl;
       });
     }
 
