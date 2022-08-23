@@ -2,6 +2,7 @@
 #define PMWCAS_DESCRIPTOR_POOL_HPP
 
 #include <atomic>
+#include <iostream>
 #include <memory>
 #include <utility>
 
@@ -26,8 +27,9 @@ class DescriptorPool
       for (auto &element : pool_) {
         auto is_reserved = element.is_reserved.load(std::memory_order_relaxed);
         if (!is_reserved) {
-          if (element.is_reserved.compare_exchange_weak(is_reserved, true,
-                                                        std::memory_order_relaxed)) {
+          auto is_changed = element.is_reserved.compare_exchange_strong(is_reserved, true,
+                                                                        std::memory_order_relaxed);
+          if (is_changed) {
             ptr = std::make_unique<ElementHolder>(&element);
             break;
           }
