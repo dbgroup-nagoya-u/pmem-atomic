@@ -1,6 +1,5 @@
 #include "pmwcas/descriptor_pool.hpp"
 
-#include <future>
 #include <iterator>
 #include <shared_mutex>
 #include <thread>
@@ -56,13 +55,9 @@ class DescriptorPoolFixture : public ::testing::Test
   GetAllDescriptor(const size_t pool_size)
   {
     std::vector<std::thread> threads;
-    std::vector<std::future<void>> futures{};
 
     for (size_t i = 0; i < pool_size; ++i) {
-      // std::promise<void> p{};
-      // futures.emplace_back(p.get_future());
-      threads.emplace_back([&, i /*, p{std::move(p)
- }*/]() mutable {
+      threads.emplace_back([&, i]() mutable {
         std::shared_lock guard{s_mtx_};
         PMwCASDescriptor *desc = GetOneDescriptor();
         desc_arr_[i] = desc;
@@ -71,7 +66,6 @@ class DescriptorPoolFixture : public ::testing::Test
           guard.unlock();
           cond_.wait(lock, [this] { return is_ready_; });
         }
-        // p.set_value();
       });
     }
 
