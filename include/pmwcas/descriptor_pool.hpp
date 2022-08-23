@@ -2,8 +2,11 @@
 #define PMWCAS_DESCRIPTOR_POOL_HPP
 
 #include <atomic>
+#include <iostream>
+#include <memory>
 #include <utility>
 
+#include "element_holder.hpp"
 #include "pmwcas_descriptor.hpp"
 
 namespace dbgroup::atomic::pmwcas
@@ -12,35 +15,34 @@ namespace dbgroup::atomic::pmwcas
 class DescriptorPool
 {
  public:
-  DescriptorPool()
-  {
-    const auto initial_data = std::make_pair(false, PMwCASDescriptor{});
-    for (auto &entry : pool_) {
-      entry = initial_data;
-    }
-  };
+  DescriptorPool() {}
 
   auto
   Get()  //
       -> PMwCASDescriptor *
   {
-    thread_local PMwCASDescriptor *desc = nullptr;
-    if (desc != nullptr) return desc;
+    thread_local std::unique_ptr<ElementHolder> ptr = nullptr;
 
-    for (auto &entry : pool_) {
-      if (!entry.first) {
-        entry.first = true;
-        desc = &entry.second;
-        return desc;
+    while (!ptr) {
+      for (auto &element : pool_) {
+        auto is_reserved = element.is_reserved.load(std::memory_order_relaxed);
+        if (!is_reserved) {
+          auto is_changed = element.is_reserved.compare_exchange_strong(is_reserved, true,
+                                                                        std::memory_order_relaxed);
+          if (is_changed) {
+            ptr = std::make_unique<ElementHolder>(&element);
+            break;
+          }
+        }
       }
     }
 
-    return desc;
+    return ptr->GetHoldDescriptor();
   }
 
  private:
   //記述子配列．長さはとりあえず定数．
-  std::pair<std::atomic_bool, PMwCASDescriptor> pool_[kDescriptorPoolSize];
+  PoolElement pool_[kDescriptorPoolSize];
 };
 
 }  // namespace dbgroup::atomic::pmwcas
