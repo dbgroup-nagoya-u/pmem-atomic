@@ -16,6 +16,7 @@
 
 #include "pmwcas/descriptor_pool.hpp"
 
+#include <future>
 #include <iterator>
 #include <shared_mutex>
 #include <thread>
@@ -53,10 +54,6 @@ class DescriptorPoolFixture : public ::testing::Test
   ExecuteInMultipleThread(const size_t pool_size)
   {
     GetAllDescriptor(pool_size);
-
-    // 重複を削除
-    std::unordered_set<PMwCASDescriptor *> distinct(std::begin(desc_arr_), std::end(desc_arr_));
-    EXPECT_EQ(distinct.size(), pool_size);
   }
 
  private:
@@ -71,12 +68,16 @@ class DescriptorPoolFixture : public ::testing::Test
   GetAllDescriptor(const size_t pool_size)
   {
     std::vector<std::thread> threads;
+    std::vector<std::future<PMwCASDescriptor *>> futures;
 
     for (size_t i = 0; i < pool_size; ++i) {
-      threads.emplace_back([&, i]() mutable {
+      std::promise<PMwCASDescriptor *> p;
+      futures.emplace_back(p.get_future());
+      threads.emplace_back([&, p{std::move(p)}]() mutable {
         std::shared_lock guard{s_mtx_};
         PMwCASDescriptor *desc = GetOneDescriptor();
-        desc_arr_[i] = desc;
+        p.set_value(desc);
+
         {
           std::unique_lock lock{x_mtx_};
           guard.unlock();
@@ -94,14 +95,21 @@ class DescriptorPoolFixture : public ::testing::Test
     }
     cond_.notify_all();
 
+    std::vector<PMwCASDescriptor *> results{};
+    results.reserve(pool_size);
+    for (auto &&future : futures) {
+      results.emplace_back(future.get());
+    }
+
     for (auto &t : threads) {
       t.join();
     }
+
+    std::unordered_set<PMwCASDescriptor *> distinct(std::begin(results), std::end(results));
+    EXPECT_EQ(distinct.size(), pool_size);
   }
 
   DescriptorPool pool_{};
-
-  std::array<PMwCASDescriptor *, DESCRIPTOR_POOL_SIZE> desc_arr_{};
 
   std::mutex x_mtx_{};
 
