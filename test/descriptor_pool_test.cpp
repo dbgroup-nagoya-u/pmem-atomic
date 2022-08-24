@@ -45,8 +45,8 @@ class DescriptorPoolFixture : public ::testing::Test
   void
   ExecuteInOneThread()
   {
-    PMwCASDescriptor *desc_1 = GetOneDescriptor();
-    PMwCASDescriptor *desc_2 = GetOneDescriptor();
+    PMwCASDescriptor *desc_1 = pool_.Get();
+    PMwCASDescriptor *desc_2 = pool_.Get();
     EXPECT_EQ(desc_1, desc_2);
   }
 
@@ -57,13 +57,6 @@ class DescriptorPoolFixture : public ::testing::Test
   }
 
  private:
-  auto
-  GetOneDescriptor() -> PMwCASDescriptor *
-  {
-    PMwCASDescriptor *desc = pool_.Get();
-    return desc;
-  }
-
   void
   GetAllDescriptor(const size_t pool_size)
   {
@@ -75,7 +68,7 @@ class DescriptorPoolFixture : public ::testing::Test
       futures.emplace_back(p.get_future());
       threads.emplace_back([&, p{std::move(p)}]() mutable {
         std::shared_lock guard{s_mtx_};
-        PMwCASDescriptor *desc = GetOneDescriptor();
+        PMwCASDescriptor *desc = pool_.Get();
         p.set_value(desc);
 
         {
