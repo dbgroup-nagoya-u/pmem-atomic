@@ -16,6 +16,7 @@
 
 #include "pmwcas/descriptor_pool.hpp"
 
+#include <chrono>
 #include <future>
 #include <iterator>
 #include <shared_mutex>
@@ -43,44 +44,57 @@ class DescriptorPoolFixture : public ::testing::Test
   }
 
   void
-  ExecuteInOneThread()
+  RunInOneThread()
   {
     PMwCASDescriptor *desc_1 = pool_.Get();
     PMwCASDescriptor *desc_2 = pool_.Get();
+
+    // Check if they are the same descriptor.
     EXPECT_EQ(desc_1, desc_2);
   }
 
   void
-  ExecuteInMultipleThread(const size_t pool_size)
+  RunInAllThread(const size_t pool_size)
   {
-    GetAllDescriptor(pool_size);
+    // After getting descriptors for all threads, get another one in another thread.
+    GetAllDescriptor(pool_size, true);
+  }
+
+  void
+  RunInAllThreadTwice(const size_t pool_size)
+  {
+    // Get descriptors in all threads.
+    GetAllDescriptor(pool_size, false);
+
+    // Once again.
+    GetAllDescriptor(pool_size, false);
   }
 
  private:
   void
-  GetAllDescriptor(const size_t pool_size)
+  GetAllDescriptor(const size_t pool_size, const bool is_additional)
   {
+    is_ready_ = false;
     std::vector<std::thread> threads;
     std::vector<std::future<PMwCASDescriptor *>> futures;
 
     for (size_t i = 0; i < pool_size; ++i) {
-      std::promise<PMwCASDescriptor *> p;
+      std::promise<PMwCASDescriptor *> p{};
       futures.emplace_back(p.get_future());
-      threads.emplace_back([&, p{std::move(p)}]() mutable {
-        std::shared_lock guard{s_mtx_};
-        PMwCASDescriptor *desc = pool_.Get();
-        p.set_value(desc);
-
-        {
-          std::unique_lock lock{x_mtx_};
-          guard.unlock();
-          cond_.wait(lock, [this] { return is_ready_; });
-        }
-      });
+      threads.emplace_back(&DescriptorPoolFixture::GetDescriptor, this, std::move(p));
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
     [[maybe_unused]] std::lock_guard s_guard{s_mtx_};
+
+    if (is_additional) {
+      std::promise<PMwCASDescriptor *> p{};
+      std::future<PMwCASDescriptor *> f = p.get_future();
+      std::thread t(&DescriptorPoolFixture::GetDescriptor, this, std::move(p));
+      auto rc = f.wait_for(std::chrono::milliseconds(3));
+      EXPECT_EQ(rc, std::future_status::timeout);
+      t.detach();
+    }
 
     {
       std::lock_guard x_guard{x_mtx_};
@@ -102,6 +116,19 @@ class DescriptorPoolFixture : public ::testing::Test
     EXPECT_EQ(distinct.size(), pool_size);
   }
 
+  void
+  GetDescriptor(std::promise<PMwCASDescriptor *> p)
+  {
+    std::shared_lock guard{s_mtx_};
+    PMwCASDescriptor *desc = pool_.Get();
+    p.set_value(desc);
+    {
+      std::unique_lock lock{x_mtx_};
+      guard.unlock();
+      cond_.wait(lock, [this] { return is_ready_; });
+    }
+  }
+
   DescriptorPool pool_{};
 
   std::mutex x_mtx_{};
@@ -110,18 +137,24 @@ class DescriptorPoolFixture : public ::testing::Test
 
   std::condition_variable cond_{};
 
-  bool is_ready_{false};
+  bool is_ready_;
 };
 
 TEST_F(DescriptorPoolFixture, GetTwoSameDescriptorInOneThread)
 {  //
-  ExecuteInOneThread();
+  RunInOneThread();
 }
 
-TEST_F(DescriptorPoolFixture, GetDifferentDescriptorsInEveryThread)
-{  //
+TEST_F(DescriptorPoolFixture, GetDifferentDescriptorsInAllThread)
+{
   auto pool_size = DESCRIPTOR_POOL_SIZE;
-  ExecuteInMultipleThread(pool_size);
+  RunInAllThread(pool_size);
+}
+
+TEST_F(DescriptorPoolFixture, GetDifferentDescriptorsInAllThreadTwice)
+{
+  auto pool_size = DESCRIPTOR_POOL_SIZE;
+  RunInAllThreadTwice(pool_size);
 }
 
 }  // namespace dbgroup::atomic::pmwcas::test
