@@ -52,27 +52,28 @@ class DescriptorPoolFixture : public ::testing::Test
   void
   RunInOneThread()
   {
-    PMwCASDescriptor *desc_1 = pool_.Get();
-    PMwCASDescriptor *desc_2 = pool_.Get();
+    auto *desc_1 = pool_.Get();
+    auto *desc_2 = pool_.Get();
 
-    // Check if they are the same descriptor.
+    // check if they are the same descriptor
     EXPECT_EQ(desc_1, desc_2);
   }
 
   void
   RunInAllThread(const size_t pool_size)
   {
-    // After getting descriptors for all threads, get another one in another thread.
+    // after getting descriptors for all threads,
+    // get another one in another thread
     GetAllDescriptor(pool_size, true);
   }
 
   void
   RunInAllThreadTwice(const size_t pool_size)
   {
-    // Get descriptors in all threads.
+    // get descriptors in all threads
     GetAllDescriptor(pool_size, false);
 
-    // Once again.
+    // once again
     GetAllDescriptor(pool_size, false);
   }
 
@@ -85,8 +86,8 @@ class DescriptorPoolFixture : public ::testing::Test
   GetAllDescriptor(const size_t pool_size, const bool is_additional)
   {
     is_ready_ = false;
-    std::vector<std::thread> threads;
-    std::vector<std::future<PMwCASDescriptor *>> futures;
+    std::vector<std::thread> threads{};
+    std::vector<std::future<PMwCASDescriptor *>> futures{};
 
     for (size_t i = 0; i < pool_size; ++i) {
       std::promise<PMwCASDescriptor *> p{};
@@ -94,7 +95,7 @@ class DescriptorPoolFixture : public ::testing::Test
       threads.emplace_back(&DescriptorPoolFixture::GetDescriptor, this, std::move(p));
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
     [[maybe_unused]] std::lock_guard s_guard{s_mtx_};
 
     if (is_additional) {
@@ -130,7 +131,7 @@ class DescriptorPoolFixture : public ::testing::Test
   GetDescriptor(std::promise<PMwCASDescriptor *> p)
   {
     std::shared_lock guard{s_mtx_};
-    PMwCASDescriptor *desc = pool_.Get();
+    auto *desc = pool_.Get();
     p.set_value(desc);
     {
       std::unique_lock lock{x_mtx_};
