@@ -31,17 +31,23 @@ namespace dbgroup::atomic::pmwcas::test
 class DescriptorPoolFixture : public ::testing::Test
 {
  protected:
+  /*####################################################################################
+   * Setup/Teardown
+   *##################################################################################*/
+
   void
   SetUp() override
   {
-    // 各テスト毎に実行する必要があるセットアップコードがある場合はここに記述するらしい
   }
 
   void
   TearDown() override
   {
-    // 各テスト毎に実行する必要がある終了コードがある場合はここに記述するらしい
   }
+
+  /*####################################################################################
+   * Functions for verification
+   *##################################################################################*/
 
   void
   RunInOneThread()
@@ -71,6 +77,10 @@ class DescriptorPoolFixture : public ::testing::Test
   }
 
  private:
+  /*####################################################################################
+   * Internal utility functions
+   *##################################################################################*/
+
   void
   GetAllDescriptor(const size_t pool_size, const bool is_additional)
   {
@@ -129,6 +139,10 @@ class DescriptorPoolFixture : public ::testing::Test
     }
   }
 
+  /*####################################################################################
+   * Internal member variables
+   *##################################################################################*/
+
   DescriptorPool pool_{};
 
   std::mutex x_mtx_{};
@@ -139,6 +153,10 @@ class DescriptorPoolFixture : public ::testing::Test
 
   bool is_ready_;
 };
+
+/*######################################################################################
+ * Unit test definitions
+ *####################################################################################*/
 
 TEST_F(DescriptorPoolFixture, GetTwoSameDescriptorInOneThread)
 {  //
