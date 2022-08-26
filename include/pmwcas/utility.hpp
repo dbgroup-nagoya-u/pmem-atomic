@@ -32,7 +32,7 @@ namespace dbgroup::atomic::pmwcas
 constexpr size_t kPMwCASCapacity = PMWCAS_CAPACITY;
 
 /// The maximum descriptor pool size
-constexpr size_t kDescriptorPoolSize = DESCRIPTOR_POOL_SIZE;
+constexpr size_t kDescriptorPoolSize = PMWCAS_DESCRIPTOR_POOL_SIZE;
 
 /*######################################################################################
  * Global utility functions
