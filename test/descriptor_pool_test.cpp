@@ -64,17 +64,17 @@ class DescriptorPoolFixture : public ::testing::Test
   {
     // after getting descriptors for all threads,
     // get another one in another thread
-    GetAllDescriptor(pool_size, true);
+    GetAllDescriptor(pool_size);
   }
 
   void
   RunInAllThreadTwice(const size_t pool_size)
   {
     // get descriptors in all threads
-    GetAllDescriptor(pool_size, false);
+    GetAllDescriptor(pool_size);
 
     // once again
-    GetAllDescriptor(pool_size, false);
+    GetAllDescriptor(pool_size);
   }
 
  private:
@@ -83,7 +83,7 @@ class DescriptorPoolFixture : public ::testing::Test
    *##################################################################################*/
 
   void
-  GetAllDescriptor(const size_t pool_size, const bool is_additional)
+  GetAllDescriptor(const size_t pool_size)
   {
     is_ready_ = false;
     std::vector<std::thread> threads{};
@@ -95,17 +95,16 @@ class DescriptorPoolFixture : public ::testing::Test
       threads.emplace_back(&DescriptorPoolFixture::GetDescriptor, this, std::move(p));
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    [[maybe_unused]] std::lock_guard s_guard{s_mtx_};
-
-    if (is_additional) {
-      std::promise<PMwCASDescriptor *> p{};
-      std::future<PMwCASDescriptor *> f = p.get_future();
-      std::thread t(&DescriptorPoolFixture::GetDescriptor, this, std::move(p));
-      auto rc = f.wait_for(std::chrono::milliseconds(3));
-      EXPECT_EQ(rc, std::future_status::timeout);
-      t.detach();
+    {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      [[maybe_unused]] std::lock_guard s_guard{s_mtx_};
     }
+
+    std::promise<PMwCASDescriptor *> extra_p{};
+    auto &&extra_f = extra_p.get_future();
+    std::thread extra_t(&DescriptorPoolFixture::GetDescriptor, this, std::move(extra_p));
+    auto rc = extra_f.wait_for(std::chrono::milliseconds(3));
+    EXPECT_EQ(rc, std::future_status::timeout);
 
     {
       std::lock_guard x_guard{x_mtx_};
@@ -125,6 +124,8 @@ class DescriptorPoolFixture : public ::testing::Test
 
     std::unordered_set<PMwCASDescriptor *> distinct(std::begin(results), std::end(results));
     EXPECT_EQ(distinct.size(), pool_size);
+
+    extra_t.join();
   }
 
   void
@@ -166,13 +167,13 @@ TEST_F(DescriptorPoolFixture, GetTwoSameDescriptorInOneThread)
 
 TEST_F(DescriptorPoolFixture, GetDifferentDescriptorsInAllThread)
 {
-  auto pool_size = DESCRIPTOR_POOL_SIZE;
+  auto pool_size = PMWCAS_DESCRIPTOR_POOL_SIZE;
   RunInAllThread(pool_size);
 }
 
 TEST_F(DescriptorPoolFixture, GetDifferentDescriptorsInAllThreadTwice)
 {
-  auto pool_size = DESCRIPTOR_POOL_SIZE;
+  auto pool_size = PMWCAS_DESCRIPTOR_POOL_SIZE;
   RunInAllThreadTwice(pool_size);
 }
 
