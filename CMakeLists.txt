@@ -26,7 +26,7 @@ CHECK_INCLUDE_FILE_CXX("xmmintrin.h" PMWCAS_HAS_SPINLOCK_HINT)
 
 set(PMWCAS_CAPACITY "4" CACHE STRING "The maximum number of target words for PMwCAS.")
 
-set(DESCRIPTOR_POOL_SIZE "8" CACHE STRING "The maximum descriptor pool size")
+set(PMWCAS_DESCRIPTOR_POOL_SIZE "8" CACHE STRING "The maximum descriptor pool size")
 
 #--------------------------------------------------------------------------------------#
 # Build targets
