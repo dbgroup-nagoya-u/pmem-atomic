@@ -31,6 +31,9 @@ namespace dbgroup::atomic::pmwcas
 /// The maximum number of target words of PMwCAS
 constexpr size_t kPMwCASCapacity = PMWCAS_CAPACITY;
 
+/// The maximum descriptor pool size
+constexpr size_t kDescriptorPoolSize = PMWCAS_DESCRIPTOR_POOL_SIZE;
+
 /*######################################################################################
  * Global utility functions
  *####################################################################################*/
