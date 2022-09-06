@@ -88,10 +88,10 @@ class PMwCASTarget
       -> bool
   {
     PMwCASField expected = old_val_;
-    while (true) {
+    for (size_t i = 0; true; ++i) {
       // try to embed a PMwCAS descriptor
       addr_->compare_exchange_strong(expected, desc_addr, std::memory_order_relaxed);
-      if (!expected.IsPMwCASDescriptor()) break;
+      if (!expected.IsPMwCASDescriptor() || i >= kRetryNum) break;
 
       // retry if another descriptor is embedded
       expected = old_val_;
@@ -114,6 +114,13 @@ class PMwCASTarget
   }
 
  private:
+  /*####################################################################################
+   * Internal constants
+   *##################################################################################*/
+
+  /// the maximum number of retries for preventing busy loops.
+  static constexpr size_t kRetryNum = 10UL;
+
   /*####################################################################################
    * Internal member variables
    *##################################################################################*/
