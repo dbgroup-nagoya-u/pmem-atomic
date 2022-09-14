@@ -104,7 +104,6 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
     for (size_t i = 0; i < kRetryNum; ++i) {
       target_word = target_addr->load(std::memory_order_relaxed);
       if (!target_word.IsPMwCASDescriptor()) return target_word.GetTargetData<T>();
-      ;
       SPINLOCK_HINT
     }
 
