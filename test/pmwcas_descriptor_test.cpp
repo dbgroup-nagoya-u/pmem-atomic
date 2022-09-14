@@ -103,7 +103,7 @@ class PMwCASDescriptorFixture : public ::testing::Test
       }
 
       // wait for all workers to finish initialization
-      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
       const std::unique_lock<std::shared_mutex> lock{main_lock_};
     }
 
