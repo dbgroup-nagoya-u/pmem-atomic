@@ -19,6 +19,8 @@
 
 #include <array>
 #include <atomic>
+#include <chrono>
+#include <thread>
 #include <utility>
 
 #include "component/pmwcas_target.hpp"
@@ -100,12 +102,15 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
 
     PMwCASField target_word{};
     while (true) {
-      target_word = target_addr->load(std::memory_order_relaxed);
-      if (!target_word.IsPMwCASDescriptor()) break;
-      SPINLOCK_HINT
-    }
+      for (size_t i = 0; i < kRetryNum; ++i) {
+        target_word = target_addr->load(std::memory_order_relaxed);
+        if (!target_word.IsPMwCASDescriptor()) return target_word.GetTargetData<T>();
+        SPINLOCK_HINT
+      }
 
-    return target_word.GetTargetData<T>();
+      // wait to prevent busy loop
+      std::this_thread::sleep_for(kShortSleep);
+    }
   }
 
   /**
@@ -173,6 +178,16 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
   }
 
  private:
+  /*####################################################################################
+   * Internal constants
+   *##################################################################################*/
+
+  /// the maximum number of retries for preventing busy loops.
+  static constexpr size_t kRetryNum = 10UL;
+
+  /// a sleep time for preventing busy loops.
+  static constexpr auto kShortSleep = std::chrono::microseconds{10};
+
   /*####################################################################################
    * Internal member variables
    *##################################################################################*/
