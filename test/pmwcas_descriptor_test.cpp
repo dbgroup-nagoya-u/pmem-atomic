@@ -180,12 +180,16 @@ class PMwCASDescriptorFixture : public ::testing::Test
 
 TEST_F(PMwCASDescriptorFixture, PMwCASWithSingleThreadCorrectlyIncrementTargets)
 {  //
+  std::cout << "begin PMwCASWithSingleThreadCorrectlyIncrementTargets" << std::endl;
   VerifyPMwCAS(1);
+  std::cout << "end PMwCASWithSingleThreadCorrectlyIncrementTargets" << std::endl;
 }
 
 TEST_F(PMwCASDescriptorFixture, PMwCASWithMultiThreadsCorrectlyIncrementTargets)
 {
+  std::cout << "begin PMwCASWithMultiThreadsCorrectlyIncrementTargets" << std::endl;
   VerifyPMwCAS(kThreadNum);
+  std::cout << "end PMwCASWithMultiThreadsCorrectlyIncrementTargets" << std::endl;
 }
 
 }  // namespace dbgroup::atomic::pmwcas::test
