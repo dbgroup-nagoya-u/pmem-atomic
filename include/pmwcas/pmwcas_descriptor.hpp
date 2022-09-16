@@ -101,14 +101,16 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
     const auto *target_addr = static_cast<const std::atomic<PMwCASField> *>(addr);
 
     PMwCASField target_word{};
-    for (size_t i = 0; i < kRetryNum; ++i) {
-      target_word = target_addr->load(std::memory_order_relaxed);
-      if (!target_word.IsPMwCASDescriptor()) return target_word.GetTargetData<T>();
-      SPINLOCK_HINT
-    }
+    while (true) {
+      for (size_t i = 0; i < kRetryNum; ++i) {
+        target_word = target_addr->load(std::memory_order_relaxed);
+        if (!target_word.IsPMwCASDescriptor()) return target_word.GetTargetData<T>();
+        SPINLOCK_HINT
+      }
 
-    // wait to prevent busy loop
-    std::this_thread::sleep_for(kShortSleep);
+      // wait to prevent busy loop
+      std::this_thread::sleep_for(kShortSleep);
+    }
   }
 
   /**
