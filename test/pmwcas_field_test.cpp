@@ -55,14 +55,19 @@ class PMwCASFieldFixture : public ::testing::Test
    *##################################################################################*/
 
   void
-  VerifyConstructor(const bool is_pmwcas_desc)
+  VerifyConstructor(const bool is_pmwcas_desc, const bool is_not_persisted)
   {
-    const auto target_word_1 = PMwCASField{data_1_, is_pmwcas_desc};
+    const auto target_word_1 = PMwCASField{data_1_, is_pmwcas_desc, is_not_persisted};
 
     if (is_pmwcas_desc) {
       EXPECT_TRUE(target_word_1.IsPMwCASDescriptor());
     } else {
       EXPECT_FALSE(target_word_1.IsPMwCASDescriptor());
+    }
+    if (is_not_persisted) {
+      EXPECT_TRUE(target_word_1.IsNotPersisted());
+    } else {
+      EXPECT_FALSE(target_word_1.IsNotPersisted());
     }
     EXPECT_EQ(data_1_, target_word_1.GetTargetData<Target>());
   }
@@ -70,34 +75,40 @@ class PMwCASFieldFixture : public ::testing::Test
   void
   VerifyEQ()
   {
-    PMwCASField field_a{data_1_, false};
-    PMwCASField field_b{data_1_, false};
+    PMwCASField field_a{data_1_, false, false};
+    PMwCASField field_b{data_1_, false, false};
     EXPECT_TRUE(field_a == field_b);
 
-    field_b = PMwCASField{data_2_, false};
+    field_b = PMwCASField{data_2_, false, false};
     EXPECT_FALSE(field_a == field_b);
 
-    field_a = PMwCASField{data_2_, true};
+    field_a = PMwCASField{data_2_, false, true};
     EXPECT_FALSE(field_a == field_b);
 
-    field_b = PMwCASField{data_2_, true};
+    field_b = PMwCASField{data_2_, true, false};
+    EXPECT_FALSE(field_a == field_b);
+
+    field_a = PMwCASField{data_2_, true, false};
     EXPECT_TRUE(field_a == field_b);
   }
 
   void
   VerifyNE()
   {
-    PMwCASField field_a{data_1_, false};
-    PMwCASField field_b{data_1_, false};
+    PMwCASField field_a{data_1_, false, false};
+    PMwCASField field_b{data_1_, false, false};
     EXPECT_FALSE(field_a != field_b);
 
-    field_b = PMwCASField{data_2_, false};
+    field_b = PMwCASField{data_2_, false, false};
     EXPECT_TRUE(field_a != field_b);
 
-    field_a = PMwCASField{data_2_, true};
+    field_a = PMwCASField{data_2_, false, true};
     EXPECT_TRUE(field_a != field_b);
 
-    field_b = PMwCASField{data_2_, true};
+    field_b = PMwCASField{data_2_, true, false};
+    EXPECT_TRUE(field_a != field_b);
+
+    field_a = PMwCASField{data_2_, true, false};
     EXPECT_FALSE(field_a != field_b);
   }
 
@@ -123,12 +134,17 @@ TYPED_TEST_SUITE(PMwCASFieldFixture, Targets);
 
 TYPED_TEST(PMwCASFieldFixture, ConstructorWithoutDescriptorFlagCreateValueField)
 {
-  TestFixture::VerifyConstructor(false);
+  TestFixture::VerifyConstructor(false, false);
+}
+
+TYPED_TEST(PMwCASFieldFixture, ConstructorWithoutDescriptorFlagCreateNotPersistedValueField)
+{
+  TestFixture::VerifyConstructor(false, true);
 }
 
 TYPED_TEST(PMwCASFieldFixture, ConstructorWithDescriptorFlagCreateDescriptorField)
 {
-  TestFixture::VerifyConstructor(true);
+  TestFixture::VerifyConstructor(true, false);
 }
 
 TYPED_TEST(PMwCASFieldFixture, EQWithAllCombinationOfInstancesReturnCorrectBool)

@@ -46,15 +46,16 @@ class PMwCASField
    * @tparam T a target class to be embedded.
    * @param target_data target data to be embedded.
    * @param is_pmwcas_descriptor a flag to indicate this field contains a descriptor.
+   * @param is_not_persisted a flag to indicate this field is not persisted.
    */
   template <class T>
   explicit constexpr PMwCASField(  //
       T target_data,
       bool is_pmwcas_descriptor = false,
-      bool is_persisted = false)
+      bool is_not_persisted = false)
       : target_bit_arr_{ConvertToUint64(target_data)},
         pmwcas_flag_{is_pmwcas_descriptor},
-        dirty_flag_{!is_persisted}
+        dirty_flag_{is_not_persisted}
   {
     // static check to validate PMwCAS targets
     static_assert(sizeof(T) == kWordSize);  // NOLINT
