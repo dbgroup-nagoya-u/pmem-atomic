@@ -148,6 +148,18 @@ class PMwCASField
     }
   }
 
+  void
+  SetDirtyFlag()
+  {
+    dirty_flag_ = true;
+  }
+
+  void
+  RemoveDirtyFlag()
+  {
+    dirty_flag_ = false;
+  }
+
  private:
   /*####################################################################################
    * Internal utility functions
