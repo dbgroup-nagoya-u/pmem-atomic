@@ -57,7 +57,7 @@ class PMwCASFieldFixture : public ::testing::Test
   void
   VerifyConstructor(const bool is_pmwcas_desc, const bool is_not_persisted)
   {
-    const auto target_word_1 = PMwCASField{data_1_, is_pmwcas_desc, is_not_persisted};
+    auto target_word_1 = PMwCASField{data_1_, is_pmwcas_desc, is_not_persisted};
 
     if (is_pmwcas_desc) {
       EXPECT_TRUE(target_word_1.IsPMwCASDescriptor());
@@ -66,8 +66,12 @@ class PMwCASFieldFixture : public ::testing::Test
     }
     if (is_not_persisted) {
       EXPECT_TRUE(target_word_1.IsNotPersisted());
+      target_word_1.RemoveDirtyFlag();
+      EXPECT_FALSE(target_word_1.IsNotPersisted());
     } else {
       EXPECT_FALSE(target_word_1.IsNotPersisted());
+      target_word_1.SetDirtyFlag();
+      EXPECT_TRUE(target_word_1.IsNotPersisted());
     }
     EXPECT_EQ(data_1_, target_word_1.GetTargetData<Target>());
   }
