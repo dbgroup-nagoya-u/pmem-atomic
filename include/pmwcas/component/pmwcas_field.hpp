@@ -148,12 +148,20 @@ class PMwCASField
     }
   }
 
+  /**
+   * @brief Set the dirty flag.
+   *
+   */
   void
   SetDirtyFlag()
   {
     dirty_flag_ = true;
   }
 
+  /**
+   * @brief Remove the dirty flag.
+   *
+   */
   void
   RemoveDirtyFlag()
   {
