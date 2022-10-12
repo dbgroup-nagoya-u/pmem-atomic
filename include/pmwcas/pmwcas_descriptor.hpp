@@ -148,7 +148,7 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
   PMwCAS()  //
       -> bool
   {
-    const PMwCASField desc_addr{this, true};
+    const PMwCASField desc_addr{this, true, false};
 
     // initialize PMwCAS status
     status_ = component::kUndecided;
@@ -165,7 +165,9 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
       }
     }
 
-    status_ = (succeeded) ? component::kSucceeded : component::kFailed;
+    if (succeeded) {
+      status_ = component::kSucceeded;
+    }
 
     // complete PMwCAS
     for (size_t i = 0; i < embedded_count; ++i) {

@@ -39,7 +39,6 @@ namespace dbgroup::atomic::pmwcas::component
 enum DescStatus {
   kUndecided,
   kSucceeded,
-  kFailed,
   kFinished
 };
 
