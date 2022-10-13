@@ -109,10 +109,10 @@ class PMwCASTarget
   void
   CompletePMwCAS(const bool succeeded)
   {
-    auto desired = (succeeded) ? new_val_ : old_val_;
-    desired.SetDirtyFlag();
-    addr_->store(desired, std::memory_order_relaxed);
-    desired.RemoveDirtyFlag();
+    const auto desired = (succeeded) ? new_val_ : old_val_;
+
+    // perform two-phase storing to guarantee persistency
+    addr_->store(desired.GetCopyWithDirtyFlag(), std::memory_order_relaxed);
     addr_->store(desired, std::memory_order_relaxed);
   }
 

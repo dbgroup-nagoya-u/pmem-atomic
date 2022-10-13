@@ -51,11 +51,10 @@ class PMwCASField
   template <class T>
   explicit constexpr PMwCASField(  //
       T target_data,
-      bool is_pmwcas_descriptor = false,
-      bool is_not_persisted = false)
+      bool is_pmwcas_descriptor = false)
       : target_bit_arr_{ConvertToUint64(target_data)},
-        pmwcas_flag_{is_pmwcas_descriptor},
-        dirty_flag_{is_not_persisted}
+        pmwcas_flag_{static_cast<uint64_t>(is_pmwcas_descriptor)},
+        dirty_flag_{0}
   {
     // static check to validate PMwCAS targets
     static_assert(sizeof(T) == kWordSize);  // NOLINT
@@ -152,20 +151,13 @@ class PMwCASField
    * @brief Set the dirty flag.
    *
    */
-  void
-  SetDirtyFlag()
+  [[nodiscard]] auto
+  GetCopyWithDirtyFlag() const  //
+      -> PMwCASField
   {
-    dirty_flag_ = true;
-  }
-
-  /**
-   * @brief Remove the dirty flag.
-   *
-   */
-  void
-  RemoveDirtyFlag()
-  {
-    dirty_flag_ = false;
+    auto dirty_obj = *this;
+    dirty_obj.dirty_flag_ = 1;
+    return dirty_obj;
   }
 
  private:
@@ -204,7 +196,7 @@ class PMwCASField
   /// Representing whether this field contains a PMwCAS descriptor
   uint64_t pmwcas_flag_ : 1;
 
-  /// A dirty bit
+  /// A flag for indicating this field may not be persisted.
   uint64_t dirty_flag_ : 1;
 };
 
