@@ -57,12 +57,15 @@ class PMwCASFieldFixture : public ::testing::Test
   void
   VerifyConstructor(const bool is_pmwcas_desc)
   {
-    const auto target_word_1 = PMwCASField{data_1_, is_pmwcas_desc};
+    auto target_word_1 = PMwCASField{data_1_, is_pmwcas_desc};
+    EXPECT_FALSE(target_word_1.IsNotPersisted());
 
     if (is_pmwcas_desc) {
       EXPECT_TRUE(target_word_1.IsPMwCASDescriptor());
     } else {
       EXPECT_FALSE(target_word_1.IsPMwCASDescriptor());
+      auto dirty_word = target_word_1.GetCopyWithDirtyFlag();
+      EXPECT_TRUE(dirty_word.IsNotPersisted());
     }
     EXPECT_EQ(data_1_, target_word_1.GetTargetData<Target>());
   }
@@ -77,10 +80,13 @@ class PMwCASFieldFixture : public ::testing::Test
     field_b = PMwCASField{data_2_, false};
     EXPECT_FALSE(field_a == field_b);
 
-    field_a = PMwCASField{data_2_, true};
+    field_a = field_b.GetCopyWithDirtyFlag();
     EXPECT_FALSE(field_a == field_b);
 
     field_b = PMwCASField{data_2_, true};
+    EXPECT_FALSE(field_a == field_b);
+
+    field_a = PMwCASField{data_2_, true};
     EXPECT_TRUE(field_a == field_b);
   }
 
@@ -94,10 +100,13 @@ class PMwCASFieldFixture : public ::testing::Test
     field_b = PMwCASField{data_2_, false};
     EXPECT_TRUE(field_a != field_b);
 
-    field_a = PMwCASField{data_2_, true};
+    field_a = field_b.GetCopyWithDirtyFlag();
     EXPECT_TRUE(field_a != field_b);
 
     field_b = PMwCASField{data_2_, true};
+    EXPECT_TRUE(field_a != field_b);
+
+    field_a = PMwCASField{data_2_, true};
     EXPECT_FALSE(field_a != field_b);
   }
 

@@ -39,6 +39,7 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
 
   using PMwCASTarget = component::PMwCASTarget;
   using PMwCASField = component::PMwCASField;
+  using DescStatus = component::DescStatus;
 
  public:
   /*####################################################################################
@@ -148,10 +149,10 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
   PMwCAS()  //
       -> bool
   {
-    const PMwCASField desc_addr{this, true};
+    const PMwCASField desc_addr{this, kDescriptorFlag};
 
     // initialize PMwCAS status
-    status_ = component::kUndecided;
+    status_ = DescStatus::kUndecided;
     auto succeeded = true;
 
     // serialize PMwCAS operations by embedding a descriptor
@@ -165,14 +166,16 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
       }
     }
 
-    status_ = (succeeded) ? component::kSucceeded : component::kFailed;
+    if (succeeded) {
+      status_ = DescStatus::kSucceeded;
+    }
 
     // complete PMwCAS
     for (size_t i = 0; i < embedded_count; ++i) {
       targets_[i].CompletePMwCAS(succeeded);
     }
 
-    status_ = component::kFinished;
+    status_ = DescStatus::kFinished;
 
     return succeeded;
   }
@@ -188,6 +191,9 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
   /// a sleep time for preventing busy loops.
   static constexpr auto kShortSleep = std::chrono::microseconds{10};
 
+  /// flag for descriptor.
+  static constexpr auto kDescriptorFlag = true;
+
   /*####################################################################################
    * Internal member variables
    *##################################################################################*/
@@ -198,7 +204,8 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
   /// The number of registered PMwCAS targets
   size_t target_count_{0};
 
-  component::DescStatus status_{component::kFinished};
+  /// PMwCAS descriptor status
+  DescStatus status_{DescStatus::kFinished};
 };
 
 }  // namespace dbgroup::atomic::pmwcas

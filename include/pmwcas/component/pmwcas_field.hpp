@@ -38,7 +38,7 @@ class PMwCASField
    * @brief Construct an empty field for PMwCAS.
    *
    */
-  constexpr PMwCASField() : target_bit_arr_{}, pmwcas_flag_{0} {}
+  constexpr PMwCASField() : target_bit_arr_{}, pmwcas_flag_{0}, dirty_flag_{0} {}
 
   /**
    * @brief Construct a PMwCAS field with given data.
@@ -46,12 +46,15 @@ class PMwCASField
    * @tparam T a target class to be embedded.
    * @param target_data target data to be embedded.
    * @param is_pmwcas_descriptor a flag to indicate this field contains a descriptor.
+   * @param is_not_persisted a flag to indicate this field is not persisted.
    */
   template <class T>
   explicit constexpr PMwCASField(  //
       T target_data,
       bool is_pmwcas_descriptor = false)
-      : target_bit_arr_{ConvertToUint64(target_data)}, pmwcas_flag_{is_pmwcas_descriptor}
+      : target_bit_arr_{ConvertToUint64(target_data)},
+        pmwcas_flag_{static_cast<uint64_t>(is_pmwcas_descriptor)},
+        dirty_flag_{0}
   {
     // static check to validate PMwCAS targets
     static_assert(sizeof(T) == kWordSize);  // NOLINT
@@ -86,7 +89,8 @@ class PMwCASField
   operator==(const PMwCASField &obj) const  //
       -> bool
   {
-    return this->pmwcas_flag_ == obj.pmwcas_flag_  //
+    return this->dirty_flag_ == obj.dirty_flag_       //
+           && this->pmwcas_flag_ == obj.pmwcas_flag_  //
            && this->target_bit_arr_ == obj.target_bit_arr_;
   }
 
@@ -94,13 +98,25 @@ class PMwCASField
   operator!=(const PMwCASField &obj) const  //
       -> bool
   {
-    return this->pmwcas_flag_ != obj.pmwcas_flag_  //
+    return this->dirty_flag_ != obj.dirty_flag_       //
+           || this->pmwcas_flag_ != obj.pmwcas_flag_  //
            || this->target_bit_arr_ != obj.target_bit_arr_;
   }
 
   /*####################################################################################
    * Public getters/setters
    *##################################################################################*/
+
+  /**
+   * @retval true if this field may not be persisted.
+   * @retval false otherwise.
+   */
+  [[nodiscard]] constexpr auto
+  IsNotPersisted() const  //
+      -> bool
+  {
+    return dirty_flag_;
+  }
 
   /**
    * @retval true if this field contains a descriptor.
@@ -129,6 +145,19 @@ class PMwCASField
     } else {
       return CASTargetConverter<T>{target_bit_arr_}.target_data;  // NOLINT
     }
+  }
+
+  /**
+   * @brief Set the dirty flag.
+   *
+   */
+  [[nodiscard]] auto
+  GetCopyWithDirtyFlag() const  //
+      -> PMwCASField
+  {
+    auto dirty_obj = *this;
+    dirty_obj.dirty_flag_ = 1;
+    return dirty_obj;
   }
 
  private:
@@ -162,10 +191,13 @@ class PMwCASField
    *##################################################################################*/
 
   /// An actual target data
-  uint64_t target_bit_arr_ : 63;
+  uint64_t target_bit_arr_ : 62;
 
   /// Representing whether this field contains a PMwCAS descriptor
   uint64_t pmwcas_flag_ : 1;
+
+  /// A flag for indicating this field may not be persisted.
+  uint64_t dirty_flag_ : 1;
 };
 
 // CAS target words must be one word
