@@ -41,7 +41,7 @@ class PMwCASTargetFixture : public ::testing::Test
     }
     target_ = old_val_;
 
-    pmwcas_target_ = PMwCASTarget{&target_, old_val_, new_val_};
+    pmwcas_target_ = PMwCASTarget{&target_, old_val_, new_val_, std::memory_order_relaxed};
     desc_ = PMwCASField{0UL, true};
   }
 

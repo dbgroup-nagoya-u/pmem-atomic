@@ -18,6 +18,7 @@
 #define PMWCAS_UTILITY_HPP
 
 #include <cassert>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <type_traits>
@@ -33,6 +34,12 @@ constexpr size_t kPMwCASCapacity = PMWCAS_CAPACITY;
 
 /// The maximum descriptor pool size
 constexpr size_t kDescriptorPoolSize = PMWCAS_DESCRIPTOR_POOL_SIZE;
+
+/// The maximum number of retries for preventing busy loops.
+constexpr size_t kRetryNum = PMWCAS_RETRY_THRESHOLD;
+
+/// A sleep time for preventing busy loops [us].
+static constexpr auto kShortSleep = std::chrono::microseconds{PMWCAS_SLEEP_TIME};
 
 /*######################################################################################
  * Global utility functions
