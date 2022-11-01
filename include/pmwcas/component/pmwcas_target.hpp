@@ -108,19 +108,23 @@ class PMwCASTarget
   /**
    * @brief Update/revert a value of this target address.
    *
-   * @param succeeded a flag to indicate a target will be updated or reverted.
    */
   void
-  CompletePMwCAS(const bool succeeded)
+  RedoPMwCAS()
   {
-    // perform two-phase storing to guarantee persistency
-    if (succeeded) {
-      addr_->store(new_val_.GetCopyWithDirtyFlag(), std::memory_order_relaxed);
-      addr_->store(new_val_, fence_);
-    } else {
-      addr_->store(old_val_.GetCopyWithDirtyFlag(), std::memory_order_relaxed);
-      addr_->store(old_val_, std::memory_order_relaxed);
-    }
+    addr_->store(new_val_.GetCopyWithDirtyFlag(), std::memory_order_relaxed);
+    addr_->store(new_val_, fence_);
+  }
+
+  /**
+   * @brief Revert a value of this target address.
+   *
+   */
+  void
+  UndoPMwCAS()
+  {
+    addr_->store(old_val_.GetCopyWithDirtyFlag(), std::memory_order_relaxed);
+    addr_->store(old_val_, std::memory_order_relaxed);
   }
 
  private:

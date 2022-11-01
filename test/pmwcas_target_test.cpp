@@ -83,11 +83,11 @@ class PMwCASTargetFixture : public ::testing::Test
   {
     ASSERT_TRUE(pmwcas_target_.EmbedDescriptor(desc_));
 
-    pmwcas_target_.CompletePMwCAS(succeeded);
-
     if (succeeded) {
+      pmwcas_target_.RedoPMwCAS();
       EXPECT_EQ(new_val_, target_);
     } else {
+      pmwcas_target_.UndoPMwCAS();
       EXPECT_EQ(old_val_, target_);
     }
   }
