@@ -115,7 +115,7 @@ class PMwCASTarget
   {
     // perform two-phase storing to guarantee persistency
     if (succeeded) {
-      addr_->store(new_val_.GetCopyWithDirtyFlag(), fence_);
+      addr_->store(new_val_.GetCopyWithDirtyFlag(), std::memory_order_relaxed);
       addr_->store(new_val_, fence_);
     } else {
       addr_->store(old_val_.GetCopyWithDirtyFlag(), std::memory_order_relaxed);
