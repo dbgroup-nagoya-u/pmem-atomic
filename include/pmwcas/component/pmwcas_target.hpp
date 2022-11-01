@@ -52,8 +52,12 @@ class PMwCASTarget
   constexpr PMwCASTarget(  //
       void *addr,
       const T old_val,
-      const T new_val)
-      : addr_{static_cast<std::atomic<PMwCASField> *>(addr)}, old_val_{old_val}, new_val_{new_val}
+      const T new_val,
+      const std::memory_order fence)
+      : addr_{static_cast<std::atomic<PMwCASField> *>(addr)},
+        old_val_{old_val},
+        new_val_{new_val},
+        fence_{fence}
   {
   }
 
@@ -104,26 +108,26 @@ class PMwCASTarget
   /**
    * @brief Update/revert a value of this target address.
    *
-   * @param succeeded a flag to indicate a target will be updated or reverted.
    */
   void
-  CompletePMwCAS(const bool succeeded)
+  RedoPMwCAS()
   {
-    const auto desired = (succeeded) ? new_val_ : old_val_;
+    addr_->store(new_val_.GetCopyWithDirtyFlag(), std::memory_order_relaxed);
+    addr_->store(new_val_, fence_);
+  }
 
-    // perform two-phase storing to guarantee persistency
-    addr_->store(desired.GetCopyWithDirtyFlag(), std::memory_order_relaxed);
-    addr_->store(desired, std::memory_order_relaxed);
+  /**
+   * @brief Revert a value of this target address.
+   *
+   */
+  void
+  UndoPMwCAS()
+  {
+    addr_->store(old_val_.GetCopyWithDirtyFlag(), std::memory_order_relaxed);
+    addr_->store(old_val_, std::memory_order_relaxed);
   }
 
  private:
-  /*####################################################################################
-   * Internal constants
-   *##################################################################################*/
-
-  /// the maximum number of retries for preventing busy loops.
-  static constexpr size_t kRetryNum = 10UL;
-
   /*####################################################################################
    * Internal member variables
    *##################################################################################*/
@@ -136,6 +140,9 @@ class PMwCASTarget
 
   /// An inserting value into a target field
   PMwCASField new_val_{};
+
+  /// A fence to be inserted when embedding a new value.
+  std::memory_order fence_{std::memory_order_seq_cst};
 };
 
 }  // namespace dbgroup::atomic::pmwcas::component

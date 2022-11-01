@@ -92,20 +92,24 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
    *
    * @tparam T an expected class of a target field
    * @param addr a target memory address to read
+   * * @param fence a flag for controling std::memory_order.
    * @return a read value
    */
   template <class T>
   static auto
-  Read(const void *addr)  //
+  Read(  //
+      const void *addr,
+      const std::memory_order fence = std::memory_order_seq_cst)  //
       -> T
   {
     const auto *target_addr = static_cast<const std::atomic<PMwCASField> *>(addr);
 
     PMwCASField target_word{};
     while (true) {
-      for (size_t i = 0; i < kRetryNum; ++i) {
-        target_word = target_addr->load(std::memory_order_relaxed);
+      for (size_t i = 1; true; ++i) {
+        target_word = target_addr->load(fence);
         if (!target_word.IsPMwCASDescriptor()) return target_word.GetTargetData<T>();
+        if (i > kRetryNum) break;
         SPINLOCK_HINT
       }
 
@@ -121,22 +125,21 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
    * @param addr a target memory address
    * @param old_val an expected value of a target field
    * @param new_val an inserting value into a target field
+   * @param fence a flag for controling std::memory_order.
    * @retval true if target registration succeeds
    * @retval false if this descriptor is already full
    */
   template <class T>
-  constexpr auto
+  constexpr void
   AddPMwCASTarget(  //
       void *addr,
       const T old_val,
-      const T new_val)  //
-      -> bool
+      const T new_val,
+      const std::memory_order fence = std::memory_order_seq_cst)
   {
-    if (target_count_ == kPMwCASCapacity) {
-      return false;
-    }
-    targets_[target_count_++] = PMwCASTarget{addr, old_val, new_val};
-    return true;
+    assert(target_count_ < kPMwCASCapacity);
+
+    targets_[target_count_++] = PMwCASTarget{addr, old_val, new_val, fence};
   }
 
   /**
@@ -171,8 +174,14 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
     }
 
     // complete PMwCAS
-    for (size_t i = 0; i < embedded_count; ++i) {
-      targets_[i].CompletePMwCAS(succeeded);
+    if (succeeded) {
+      for (size_t i = 0; i < embedded_count; ++i) {
+        targets_[i].RedoPMwCAS();
+      }
+    } else {
+      for (size_t i = 0; i < embedded_count; ++i) {
+        targets_[i].UndoPMwCAS();
+      }
     }
 
     status_ = DescStatus::kFinished;
