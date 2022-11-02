@@ -69,7 +69,8 @@ class DescriptorPool
   Get()  //
       -> PMwCASDescriptor *
   {
-    thread_local std::unique_ptr<ElementHolder> ptr = nullptr;
+    thread_local pmem::obj::persistent_ptr<ElementHolder> ptr = nullptr;
+    // thread_local std::unique_ptr<ElementHolder> ptr = nullptr;
 
     while (!ptr) {
       for (auto &element : root_->pool) {
@@ -78,7 +79,8 @@ class DescriptorPool
           auto is_changed = element.get_rw().is_reserved.compare_exchange_strong(
               is_reserved, true, std::memory_order_relaxed);
           if (is_changed) {
-            ptr = std::make_unique<ElementHolder>(&element);
+            ptr = pmem::obj::make_persistent<ElementHolder>(&element);
+            // ptr = std::make_unique<ElementHolder>(&element);
             break;
           }
         }
