@@ -145,7 +145,7 @@ class DescriptorPoolFixture : public ::testing::Test
    * Internal member variables
    *##################################################################################*/
 
-  DescriptorPool pool_{};
+  DescriptorPool pool_{"/dev/dax0.0"};
 
   std::mutex x_mtx_{};
 

@@ -19,6 +19,11 @@
 
 #include <atomic>
 #include <iostream>
+#include <libpmemobj++/make_persistent.hpp>
+#include <libpmemobj++/make_persistent_atomic.hpp>
+#include <libpmemobj++/p.hpp>
+#include <libpmemobj++/persistent_ptr.hpp>
+#include <libpmemobj++/pool.hpp>
 #include <memory>
 #include <utility>
 
@@ -30,11 +35,32 @@ namespace dbgroup::atomic::pmwcas
 
 class DescriptorPool
 {
+  /*################################################################################################
+   * Type aliases
+   *##############################################################################################*/
+
+  template <class T>
+  using PmemPool = ::pmem::obj::pool<T>;
+
+  template <class T>
+  using PmemPtr = ::pmem::obj::persistent_ptr<T>;
+
  public:
   /*####################################################################################
    * Public constructors and assignment operators
    *##################################################################################*/
-  DescriptorPool() {}
+  DescriptorPool(const std::string &path)
+      : pop_{PmemPool<DescPool>::create(
+          path, "desc_pool", sizeof(DescPool) * 2, S_IRUSR | S_IWUSR)},
+        root_{pop_.root()}
+  {
+  }
+
+  /*################################################################################################
+   * Public destructors
+   *##############################################################################################*/
+
+  ~DescriptorPool() { pop_.close(); }
 
   /*####################################################################################
    * Public utility functions
@@ -46,11 +72,11 @@ class DescriptorPool
     thread_local std::unique_ptr<ElementHolder> ptr = nullptr;
 
     while (!ptr) {
-      for (auto &element : pool_) {
-        auto is_reserved = element.is_reserved.load(std::memory_order_relaxed);
+      for (auto &element : root_->pool) {
+        auto is_reserved = element.get_ro().is_reserved.load(std::memory_order_relaxed);
         if (!is_reserved) {
-          auto is_changed = element.is_reserved.compare_exchange_strong(is_reserved, true,
-                                                                        std::memory_order_relaxed);
+          auto is_changed = element.get_rw().is_reserved.compare_exchange_strong(
+              is_reserved, true, std::memory_order_relaxed);
           if (is_changed) {
             ptr = std::make_unique<ElementHolder>(&element);
             break;
@@ -63,12 +89,26 @@ class DescriptorPool
   }
 
  private:
+  /*################################################################################################
+   * Internal classes/structs
+   *##############################################################################################*/
+
+  struct DescPool {
+    ::pmem::obj::p<PoolElement> pool[kDescriptorPoolSize];
+  };
+
   /*####################################################################################
    * Internal member variables
    *##################################################################################*/
 
   /// Descriptor pool
-  PoolElement pool_[kDescriptorPoolSize];
+  // PoolElement pool_[kDescriptorPoolSize];
+
+  /// pool object pointer
+  PmemPool<DescPool> pop_;
+
+  /// a pointer to the root object
+  PmemPtr<DescPool> root_;
 };
 
 }  // namespace dbgroup::atomic::pmwcas
