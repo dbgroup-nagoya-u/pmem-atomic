@@ -46,13 +46,13 @@ class DescriptorPool
     thread_local std::unique_ptr<ElementHolder> ptr = nullptr;
 
     while (!ptr) {
-      for (auto &element : pool_) {
-        auto is_reserved = element.is_reserved.load(std::memory_order_relaxed);
+      for (size_t i = 0; i < kDescriptorPoolSize; ++i) {
+        auto is_reserved = reserve_arr_[i].load(std::memory_order_relaxed);
         if (!is_reserved) {
-          auto is_changed = element.is_reserved.compare_exchange_strong(is_reserved, true,
-                                                                        std::memory_order_relaxed);
+          auto is_changed =
+              reserve_arr_[i].compare_exchange_strong(is_reserved, true, std::memory_order_relaxed);
           if (is_changed) {
-            ptr = std::make_unique<ElementHolder>(&element);
+            ptr = std::make_unique<ElementHolder>(&pool_[i]);
             break;
           }
         }
@@ -68,7 +68,10 @@ class DescriptorPool
    *##################################################################################*/
 
   /// Descriptor pool
-  PoolElement pool_[kDescriptorPoolSize];
+  PMwCASDescriptor pool_[kDescriptorPoolSize];
+
+  std::shared_ptr<std::atomic_bool[]> reserve_arr_ =
+      std::make_shared<std::atomic_bool[]>(kDescriptorPoolSize);
 };
 
 }  // namespace dbgroup::atomic::pmwcas
