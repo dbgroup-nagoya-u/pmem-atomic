@@ -52,7 +52,7 @@ class DescriptorPool
           auto is_changed =
               reserve_arr_[i].compare_exchange_strong(is_reserved, true, std::memory_order_relaxed);
           if (is_changed) {
-            ptr = std::make_unique<ElementHolder>(&pool_[i]);
+            ptr = std::make_unique<ElementHolder>(i, reserve_arr_, pool_);
             break;
           }
         }
@@ -70,8 +70,7 @@ class DescriptorPool
   /// Descriptor pool
   PMwCASDescriptor pool_[kDescriptorPoolSize];
 
-  std::shared_ptr<std::atomic_bool[]> reserve_arr_ =
-      std::make_shared<std::atomic_bool[]>(kDescriptorPoolSize);
+  std::shared_ptr<std::atomic_bool[]> reserve_arr_{new std::atomic_bool[kDescriptorPoolSize]};
 };
 
 }  // namespace dbgroup::atomic::pmwcas
