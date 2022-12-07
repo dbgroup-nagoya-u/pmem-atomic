@@ -20,14 +20,6 @@
 
 namespace dbgroup::atomic::pmwcas
 {
-struct PoolElement {
- public:
-  /// a flag for indicating this element is reserved.
-  std::atomic_bool is_reserved{false};
-
-  /// a target instance.
-  PMwCASDescriptor desc{};
-};
 
 class ElementHolder
 {
@@ -36,7 +28,13 @@ class ElementHolder
    * Public constructors and assignment operators
    *##################################################################################*/
 
-  explicit ElementHolder(PoolElement *element) : element_{element} {}
+  ElementHolder(  //
+      const size_t pos,
+      const std::shared_ptr<std::atomic_bool[]> &reserved_arr,
+      PMwCASDescriptor *desc_pool)
+      : pos_{pos}, desc_{&(desc_pool[pos])}, reserved_arr_{reserved_arr}
+  {
+  }
 
   ElementHolder(const ElementHolder &) = delete;
   ElementHolder(ElementHolder &&) = delete;
@@ -47,7 +45,7 @@ class ElementHolder
    * Public destructors
    *##################################################################################*/
 
-  ~ElementHolder() { element_->is_reserved.store(false, std::memory_order_relaxed); }
+  ~ElementHolder() { reserved_arr_[pos_].store(false, std::memory_order_relaxed); }
 
   /*####################################################################################
    * Public getters
@@ -57,7 +55,7 @@ class ElementHolder
   GetHoldDescriptor() const  //
       -> PMwCASDescriptor *
   {
-    return &(element_->desc);
+    return desc_;
   }
 
  private:
@@ -65,8 +63,14 @@ class ElementHolder
    * Internal member variables
    *##################################################################################*/
 
-  /// an address of an actual element.
-  PoolElement *element_{};
+  /// the position of a descriptor in a pool.
+  size_t pos_{0};
+
+  /// an address of a descriptor.
+  PMwCASDescriptor *desc_{nullptr};
+
+  /// an actual reservation flag for this object.
+  std::shared_ptr<std::atomic_bool[]> reserved_arr_{nullptr};
 };
 
 }  // namespace dbgroup::atomic::pmwcas
