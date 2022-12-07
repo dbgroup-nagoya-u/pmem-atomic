@@ -19,11 +19,13 @@ set(PMWCAS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 # load the module to use pkg-config
 find_package(PkgConfig)
 
-# search library with pkg-config and name its results "LIBPMEM"
+# search library with pkg-config and name its results "LIBPMEM" and "LIBPMEMOBJ"
 pkg_check_modules(LIBPMEM REQUIRED libpmem)
+pkg_check_modules(LIBPMEMOBJ REQUIRED libpmemobj)
 
 # use the variable <RESULTNAME>_INCLUDE_DIRS to get include paths
 include_directories(${LIBPMEM_INCLUDE_DIRS})
+include_directories(${LIBPMEMOBJ_INCLUDE_DIRS})
 
 # check SSE support for spinlock hints
 include(CheckIncludeFileCXX)
@@ -64,6 +66,7 @@ if(NOT TARGET pmwcas::pmwcas)
   target_link_libraries(pmwcas INTERFACE
     pthread
     ${LIBPMEM_LIBRARIES}
+    ${LIBPMEMOBJ_LIBRARIES}
   )
 endif()
 
