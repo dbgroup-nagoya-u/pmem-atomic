@@ -34,7 +34,12 @@ class DescriptorPool
   /*####################################################################################
    * Public constructors and assignment operators
    *##################################################################################*/
-  DescriptorPool() {}
+  DescriptorPool()
+  {
+    for (size_t i = 0; i < kDescriptorPoolSize; ++i) {
+      reserve_arr_[i].store(false);
+    }
+  }
 
   /*####################################################################################
    * Public utility functions
