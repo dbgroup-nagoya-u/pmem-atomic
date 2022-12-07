@@ -75,6 +75,7 @@ class DescriptorPool
   /// Descriptor pool
   PMwCASDescriptor pool_[kDescriptorPoolSize];
 
+  /// An array representing the occupied state of the descriptor pool
   std::shared_ptr<std::atomic_bool[]> reserve_arr_{new std::atomic_bool[kDescriptorPoolSize]};
 };
 
