@@ -31,8 +31,8 @@ class ElementHolder
   ElementHolder(  //
       const size_t pos,
       const std::shared_ptr<std::atomic_bool[]> &reserved_arr,
-      PMwCASDescriptor *desc_pool)
-      : pos_{pos}, desc_{&(desc_pool[pos])}, reserved_arr_{reserved_arr}
+      PMwCASDescriptor *desc)
+      : pos_{pos}, desc_{desc}, reserved_arr_{reserved_arr}
   {
   }
 
