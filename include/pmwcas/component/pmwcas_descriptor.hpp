@@ -23,7 +23,7 @@
 #include <thread>
 #include <utility>
 
-#include "component/pmwcas_target.hpp"
+#include "pmwcas_target.hpp"
 
 namespace dbgroup::atomic::pmwcas
 {

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "pmwcas/pmwcas_descriptor.hpp"
+#include "pmwcas/component/pmwcas_descriptor.hpp"
 
 #include <future>
 #include <mutex>

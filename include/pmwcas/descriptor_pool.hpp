@@ -22,8 +22,8 @@
 #include <memory>
 #include <utility>
 
-#include "element_holder.hpp"
-#include "pmwcas_descriptor.hpp"
+#include "component/element_holder.hpp"
+#include "component/pmwcas_descriptor.hpp"
 
 namespace dbgroup::atomic::pmwcas
 {
