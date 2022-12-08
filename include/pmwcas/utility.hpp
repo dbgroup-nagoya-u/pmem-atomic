@@ -14,40 +14,45 @@
  * limitations under the License.
  */
 
-#ifndef MWCAS_UTILITY_HPP
-#define MWCAS_UTILITY_HPP
+#ifndef PMWCAS_UTILITY_HPP
+#define PMWCAS_UTILITY_HPP
 
 #include <cassert>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <type_traits>
 
-namespace dbgroup::atomic::mwcas
+namespace dbgroup::atomic::pmwcas
 {
 /*######################################################################################
  * Global enum and constants
  *####################################################################################*/
 
-#ifdef MWCAS_CAPACITY
-/// The maximum number of target words of MwCAS
-constexpr size_t kMwCASCapacity = MWCAS_CAPACITY;
-#else
-/// The maximum number of target words of MwCAS
-constexpr size_t kMwCASCapacity = 4;
-#endif
+/// The maximum number of target words of PMwCAS
+constexpr size_t kPMwCASCapacity = PMWCAS_CAPACITY;
+
+/// The maximum descriptor pool size
+constexpr size_t kDescriptorPoolSize = PMWCAS_DESCRIPTOR_POOL_SIZE;
+
+/// The maximum number of retries for preventing busy loops.
+constexpr size_t kRetryNum = PMWCAS_RETRY_THRESHOLD;
+
+/// A sleep time for preventing busy loops [us].
+static constexpr auto kShortSleep = std::chrono::microseconds{PMWCAS_SLEEP_TIME};
 
 /*######################################################################################
  * Global utility functions
  *####################################################################################*/
 
 /**
- * @tparam T a MwCAS target class.
- * @retval true if a target class can be updated by MwCAS.
+ * @tparam T a PMwCAS target class.
+ * @retval true if a target class can be updated by PMwCAS.
  * @retval false otherwise.
  */
 template <class T>
 constexpr auto
-CanMwCAS()  //
+CanPMwCAS()  //
     -> bool
 {
   if constexpr (std::is_same_v<T, uint64_t> || std::is_pointer_v<T>) {
@@ -57,6 +62,6 @@ CanMwCAS()  //
   }
 }
 
-}  // namespace dbgroup::atomic::mwcas
+}  // namespace dbgroup::atomic::pmwcas
 
-#endif  // MWCAS_UTILITY_HPP
+#endif  // PMWCAS_UTILITY_HPP

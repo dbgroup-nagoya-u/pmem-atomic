@@ -54,6 +54,7 @@
     "ctest",
     "DCMAKE",
     "DMWCAS",
+    "DPMWCAS",
     "endl",
     "gtest",
     "IEICE",
@@ -65,10 +66,12 @@
     "mwcas",
     "NCAS",
     "NOLINT",
+    "pmwcas",
     "pthread",
     "RDCSS",
     "struct",
-    "Wextra"
+    "Wextra",
+    "xmmintrin"
   ],
   "files.associations": {
     "fstream": "cpp",
@@ -143,6 +146,14 @@
     "cstring": "cpp",
     "future": "cpp",
     "variant": "cpp",
-    "shared_mutex": "cpp"
+    "shared_mutex": "cpp",
+    "csignal": "cpp",
+    "strstream": "cpp",
+    "bitset": "cpp",
+    "complex": "cpp",
+    "cfenv": "cpp",
+    "typeindex": "cpp",
+    "valarray": "cpp",
+    "source_location": "cpp"
   },
 }

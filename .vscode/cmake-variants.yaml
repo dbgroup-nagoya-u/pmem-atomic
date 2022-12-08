@@ -8,18 +8,18 @@ buildType:
       buildType: Debug
       settings:
         CMAKE_CXX_CLANG_TIDY: "clang-tidy"
-        MWCAS_BUILD_TESTS: ON
+        PMWCAS_BUILD_TESTS: ON
     relWithDebInfo:
       short: RelWithDebInfo
       long: Perform optimizations and include debugging informatin
       buildType: RelWithDebInfo
       settings:
         CMAKE_CXX_CLANG_TIDY: "clang-tidy"
-        MWCAS_BUILD_TESTS: ON
+        PMWCAS_BUILD_TESTS: ON
     release:
       short: Release
       long: Perform optimizations and omit debugging informatin
       buildType: Release
       settings:
         CMAKE_CXX_CLANG_TIDY: "clang-tidy"
-        MWCAS_BUILD_TESTS: ON
+        PMWCAS_BUILD_TESTS: ON

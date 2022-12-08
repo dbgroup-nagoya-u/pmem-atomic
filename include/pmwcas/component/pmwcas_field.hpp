@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-#ifndef MWCAS_COMPONENT_MWCAS_FIELD_HPP
-#define MWCAS_COMPONENT_MWCAS_FIELD_HPP
+#ifndef PMWCAS_COMPONENT_PMWCAS_FIELD_HPP
+#define PMWCAS_COMPONENT_PMWCAS_FIELD_HPP
 
 #include <atomic>
 
 #include "common.hpp"
 
-namespace dbgroup::atomic::mwcas::component
+namespace dbgroup::atomic::pmwcas::component
 {
 /**
- * @brief A class to represent a MwCAS target field.
+ * @brief A class to represent a PMwCAS target field.
  *
  */
-class MwCASField
+class PMwCASField
 {
  public:
   /*####################################################################################
@@ -35,66 +35,71 @@ class MwCASField
    *##################################################################################*/
 
   /**
-   * @brief Construct an empty field for MwCAS.
+   * @brief Construct an empty field for PMwCAS.
    *
    */
-  constexpr MwCASField() : target_bit_arr_{}, mwcas_flag_{0} {}
+  constexpr PMwCASField() : target_bit_arr_{}, pmwcas_flag_{0}, dirty_flag_{0} {}
 
   /**
-   * @brief Construct a MwCAS field with given data.
+   * @brief Construct a PMwCAS field with given data.
    *
    * @tparam T a target class to be embedded.
    * @param target_data target data to be embedded.
-   * @param is_mwcas_descriptor a flag to indicate this field contains a descriptor.
+   * @param is_pmwcas_descriptor a flag to indicate this field contains a descriptor.
+   * @param is_not_persisted a flag to indicate this field is not persisted.
    */
   template <class T>
-  explicit constexpr MwCASField(  //
+  explicit constexpr PMwCASField(  //
       T target_data,
-      bool is_mwcas_descriptor = false)
-      : target_bit_arr_{ConvertToUint64(target_data)}, mwcas_flag_{is_mwcas_descriptor}
+      bool is_pmwcas_descriptor = false)
+      : target_bit_arr_{ConvertToUint64(target_data)},
+        pmwcas_flag_{static_cast<uint64_t>(is_pmwcas_descriptor)},
+        dirty_flag_{0}
   {
-    // static check to validate MwCAS targets
+    // static check to validate PMwCAS targets
     static_assert(sizeof(T) == kWordSize);  // NOLINT
     static_assert(std::is_trivially_copyable_v<T>);
     static_assert(std::is_copy_constructible_v<T>);
     static_assert(std::is_move_constructible_v<T>);
     static_assert(std::is_copy_assignable_v<T>);
     static_assert(std::is_move_assignable_v<T>);
-    static_assert(CanMwCAS<T>());
+    static_assert(CanPMwCAS<T>());
   }
 
-  constexpr MwCASField(const MwCASField &) = default;
-  constexpr auto operator=(const MwCASField &obj) -> MwCASField & = default;
-  constexpr MwCASField(MwCASField &&) = default;
-  constexpr auto operator=(MwCASField &&) -> MwCASField & = default;
+  constexpr PMwCASField(const PMwCASField &) = default;
+  constexpr auto operator=(const PMwCASField &obj) -> PMwCASField & = default;
+  constexpr PMwCASField(PMwCASField &&) = default;
+  constexpr auto operator=(PMwCASField &&) -> PMwCASField & = default;
 
   /*####################################################################################
    * Public destructor
    *##################################################################################*/
 
   /**
-   * @brief Destroy the MwCASField object.
+   * @brief Destroy the PMwCASField object.
    *
    */
-  ~MwCASField() = default;
+  ~PMwCASField() = default;
 
   /*####################################################################################
    * Public operators
    *##################################################################################*/
 
   constexpr auto
-  operator==(const MwCASField &obj) const  //
+  operator==(const PMwCASField &obj) const  //
       -> bool
   {
-    return this->mwcas_flag_ == obj.mwcas_flag_  //
+    return this->dirty_flag_ == obj.dirty_flag_       //
+           && this->pmwcas_flag_ == obj.pmwcas_flag_  //
            && this->target_bit_arr_ == obj.target_bit_arr_;
   }
 
   constexpr auto
-  operator!=(const MwCASField &obj) const  //
+  operator!=(const PMwCASField &obj) const  //
       -> bool
   {
-    return this->mwcas_flag_ != obj.mwcas_flag_  //
+    return this->dirty_flag_ != obj.dirty_flag_       //
+           || this->pmwcas_flag_ != obj.pmwcas_flag_  //
            || this->target_bit_arr_ != obj.target_bit_arr_;
   }
 
@@ -103,14 +108,25 @@ class MwCASField
    *##################################################################################*/
 
   /**
+   * @retval true if this field may not be persisted.
+   * @retval false otherwise.
+   */
+  [[nodiscard]] constexpr auto
+  IsNotPersisted() const  //
+      -> bool
+  {
+    return dirty_flag_;
+  }
+
+  /**
    * @retval true if this field contains a descriptor.
    * @retval false otherwise.
    */
   [[nodiscard]] constexpr auto
-  IsMwCASDescriptor() const  //
+  IsPMwCASDescriptor() const  //
       -> bool
   {
-    return mwcas_flag_;
+    return pmwcas_flag_;
   }
 
   /**
@@ -129,6 +145,19 @@ class MwCASField
     } else {
       return CASTargetConverter<T>{target_bit_arr_}.target_data;  // NOLINT
     }
+  }
+
+  /**
+   * @brief Set the dirty flag.
+   *
+   */
+  [[nodiscard]] auto
+  GetCopyWithDirtyFlag() const  //
+      -> PMwCASField
+  {
+    auto dirty_obj = *this;
+    dirty_obj.dirty_flag_ = 1;
+    return dirty_obj;
   }
 
  private:
@@ -162,15 +191,18 @@ class MwCASField
    *##################################################################################*/
 
   /// An actual target data
-  uint64_t target_bit_arr_ : 63;
+  uint64_t target_bit_arr_ : 62;
 
-  /// Representing whether this field contains a MwCAS descriptor
-  uint64_t mwcas_flag_ : 1;
+  /// Representing whether this field contains a PMwCAS descriptor
+  uint64_t pmwcas_flag_ : 1;
+
+  /// A flag for indicating this field may not be persisted.
+  uint64_t dirty_flag_ : 1;
 };
 
 // CAS target words must be one word
-static_assert(sizeof(MwCASField) == kWordSize);
+static_assert(sizeof(PMwCASField) == kWordSize);
 
-}  // namespace dbgroup::atomic::mwcas::component
+}  // namespace dbgroup::atomic::pmwcas::component
 
-#endif  // MWCAS_COMPONENT_MWCAS_FIELD_HPP
+#endif  // PMWCAS_COMPONENT_PMWCAS_FIELD_HPP

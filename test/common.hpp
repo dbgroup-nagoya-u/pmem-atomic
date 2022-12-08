@@ -19,10 +19,10 @@
 
 #include <functional>
 
-#include "mwcas/utility.hpp"
+#include "pmwcas/utility.hpp"
 
-#ifdef MWCAS_TEST_THREAD_NUM
-constexpr size_t kThreadNum = MWCAS_TEST_THREAD_NUM;
+#ifdef PMWCAS_TEST_THREAD_NUM
+constexpr size_t kThreadNum = PMWCAS_TEST_THREAD_NUM;
 #else
 constexpr size_t kThreadNum = 8;
 #endif
@@ -69,20 +69,20 @@ class MyClass
   uint64_t control_bits_ : 1;  // NOLINT
 };
 
-namespace dbgroup::atomic::mwcas
+namespace dbgroup::atomic::pmwcas
 {
 /**
- * @brief Specialization to enable MwCAS to swap our sample class.
+ * @brief Specialization to enable PMwCAS to swap our sample class.
  *
  */
 template <>
 constexpr auto
-CanMwCAS<MyClass>()  //
+CanPMwCAS<MyClass>()  //
     -> bool
 {
   return true;
 }
 
-}  // namespace dbgroup::atomic::mwcas
+}  // namespace dbgroup::atomic::pmwcas
 
 #endif  // TEST_COMMON_HPP
