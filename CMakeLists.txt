@@ -16,14 +16,14 @@ project(
 # define source directories
 set(PMWCAS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 
+# this library uses multi-threads
+find_package(Threads)
+
 # load the module to use pkg-config
 find_package(PkgConfig)
 
-# search library with pkg-config and name its results "LIBPMEM"
-pkg_check_modules(LIBPMEM REQUIRED libpmem)
-
-# use the variable <RESULTNAME>_INCLUDE_DIRS to get include paths
-include_directories(${LIBPMEM_INCLUDE_DIRS})
+# search library with pkg-config and name its results "LIBPMEMOBJ++"
+pkg_check_modules(LIBPMEMOBJ++ REQUIRED libpmemobj++)
 
 # check SSE support for spinlock hints
 include(CheckIncludeFileCXX)
@@ -61,10 +61,14 @@ if(NOT TARGET pmwcas::pmwcas)
     PMWCAS_SLEEP_TIME=${PMWCAS_SLEEP_TIME}
     $<$<BOOL:${PMWCAS_HAS_SPINLOCK_HINT}>:PMWCAS_HAS_SPINLOCK_HINT>
   )
-  target_link_libraries(pmwcas INTERFACE
-    pthread
-    ${LIBPMEM_LIBRARIES}
+  target_include_directories(pmwcas INTERFACE
+    "${LIBPMEMOBJ++_INCLUDE_DIRS}"
   )
+
+  target_link_libraries(pmwcas INTERFACE
+  Threads::Threads
+  ${LIBPMEMOBJ++_LIBRARIES}
+)
 endif()
 
 #--------------------------------------------------------------------------------------#
