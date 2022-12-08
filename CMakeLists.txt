@@ -53,6 +53,7 @@ if(NOT TARGET pmwcas::pmwcas)
   )
   target_include_directories(pmwcas INTERFACE
     "${PMWCAS_SOURCE_DIR}/include"
+    "${LIBPMEMOBJ++_INCLUDE_DIRS}"
   )
   target_compile_definitions(pmwcas INTERFACE
     PMWCAS_CAPACITY=${PMWCAS_CAPACITY}
@@ -60,9 +61,6 @@ if(NOT TARGET pmwcas::pmwcas)
     PMWCAS_RETRY_THRESHOLD=${PMWCAS_RETRY_THRESHOLD}
     PMWCAS_SLEEP_TIME=${PMWCAS_SLEEP_TIME}
     $<$<BOOL:${PMWCAS_HAS_SPINLOCK_HINT}>:PMWCAS_HAS_SPINLOCK_HINT>
-  )
-  target_include_directories(pmwcas INTERFACE
-    "${LIBPMEMOBJ++_INCLUDE_DIRS}"
   )
 
   target_link_libraries(pmwcas INTERFACE
