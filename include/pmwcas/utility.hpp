@@ -35,6 +35,8 @@ constexpr size_t kPMwCASCapacity = PMWCAS_CAPACITY;
 /// The maximum descriptor pool size
 constexpr size_t kDescriptorPoolSize = PMWCAS_DESCRIPTOR_POOL_SIZE;
 
+const std::string kDescriptorPoolPath = PMWCAS_DESCRIPTOR_POOL_PATH;
+
 /// The maximum number of retries for preventing busy loops.
 constexpr size_t kRetryNum = PMWCAS_RETRY_THRESHOLD;
 

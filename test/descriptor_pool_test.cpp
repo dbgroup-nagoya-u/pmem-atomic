@@ -145,7 +145,7 @@ class DescriptorPoolFixture : public ::testing::Test
    * Internal member variables
    *##################################################################################*/
 
-  DescriptorPool pool_{"/data2/pmwcas_test/test1", "pmwcas_descriptor_pool"};
+  DescriptorPool pool_{kDescriptorPoolPath, "pmwcas_descriptor_pool"};
 
   std::mutex x_mtx_{};
 
