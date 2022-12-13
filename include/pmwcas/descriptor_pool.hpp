@@ -69,7 +69,7 @@ class DescriptorPool
       }
     } catch (const std::exception &e) {
       std::cerr << e.what() << std::endl;
-      exit(EXIT_FAILURE);
+      std::terminate();
     }
   }
 
