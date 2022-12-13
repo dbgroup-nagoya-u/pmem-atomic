@@ -20,11 +20,16 @@
 #include <future>
 #include <iterator>
 #include <shared_mutex>
+#include <string>
 #include <thread>
 #include <unordered_set>
 
 #include "common.hpp"
 #include "gtest/gtest.h"
+
+#define DBGROUP_ADD_QUOTES_INNER(x) #x                     // NOLINT
+#define DBGROUP_ADD_QUOTES(x) DBGROUP_ADD_QUOTES_INNER(x)  // NOLINT
+const std::string kDescriptorPoolPath = DBGROUP_ADD_QUOTES(PMWCAS_TEST_DESCRIPTOR_POOL_PATH);
 
 namespace dbgroup::atomic::pmwcas::test
 {
