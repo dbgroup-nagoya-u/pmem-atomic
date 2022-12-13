@@ -21,6 +21,7 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <string>
 #include <type_traits>
 
 namespace dbgroup::atomic::pmwcas

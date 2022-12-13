@@ -18,9 +18,17 @@
 #define PMWCAS_DESCRIPTOR_POOL_HPP
 
 #include <atomic>
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <utility>
+
+// libraries for managing persistem memory
+#include <libpmemobj++/make_persistent.hpp>
+#include <libpmemobj++/make_persistent_atomic.hpp>
+#include <libpmemobj++/p.hpp>
+#include <libpmemobj++/persistent_ptr.hpp>
+#include <libpmemobj++/pool.hpp>
 
 #include "component/element_holder.hpp"
 #include "component/pmwcas_descriptor.hpp"
@@ -30,16 +38,46 @@ namespace dbgroup::atomic::pmwcas
 
 class DescriptorPool
 {
+  /*################################################################################################
+   * Type aliases
+   *##############################################################################################*/
+
+  template <class T>
+  using PmemPool_t = ::pmem::obj::pool<T>;
+
  public:
   /*####################################################################################
    * Public constructors and assignment operators
    *##################################################################################*/
-  DescriptorPool()
+  DescriptorPool(  //
+      const std::string &path,
+      const std::string &layout)
   {
+    // initialize reservation status
     for (size_t i = 0; i < kDescriptorPoolSize; ++i) {
       reserve_arr_[i].store(false);
     }
+
+    // create/open a pool on persistent memory
+    try {
+      if (std::filesystem::exists(path)) {
+        pmem_pool_ = PmemPool_t<DescArray>::open(path, layout);
+        // 途中状態のrecovery
+      } else {
+        constexpr size_t kSize = ((sizeof(DescArray) / PMEMOBJ_MIN_POOL) + 2) * PMEMOBJ_MIN_POOL;
+        pmem_pool_ = PmemPool_t<DescArray>::create(path, layout, kSize, S_IRUSR | S_IWUSR);
+      }
+    } catch (const std::exception &e) {
+      std::cerr << e.what() << std::endl;
+      std::terminate();
+    }
   }
+
+  /*################################################################################################
+   * Public destructors
+   *##############################################################################################*/
+
+  ~DescriptorPool() { pmem_pool_.close(); }
 
   /*####################################################################################
    * Public utility functions
@@ -57,7 +95,8 @@ class DescriptorPool
           auto is_changed =
               reserve_arr_[i].compare_exchange_strong(is_reserved, true, std::memory_order_relaxed);
           if (is_changed) {
-            ptr = std::make_unique<ElementHolder>(i, reserve_arr_, pool_);
+            auto root = pmem_pool_.root();
+            ptr = std::make_unique<ElementHolder>(i, reserve_arr_, &(root->descriptors[i]));
             break;
           }
         }
@@ -68,12 +107,20 @@ class DescriptorPool
   }
 
  private:
+  /*################################################################################################
+   * Internal classes/structs
+   *##############################################################################################*/
+
+  /// Descriptor pool array
+  struct DescArray {
+    PMwCASDescriptor descriptors[kDescriptorPoolSize]{};
+  };
+
   /*####################################################################################
    * Internal member variables
    *##################################################################################*/
 
-  /// Descriptor pool
-  PMwCASDescriptor pool_[kDescriptorPoolSize];
+  PmemPool_t<DescArray> pmem_pool_;
 
   /// An array representing the occupied state of the descriptor pool
   std::shared_ptr<std::atomic_bool[]> reserve_arr_{new std::atomic_bool[kDescriptorPoolSize]};

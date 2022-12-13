@@ -20,11 +20,15 @@
 #include <future>
 #include <iterator>
 #include <shared_mutex>
+#include <string>
 #include <thread>
 #include <unordered_set>
 
 #include "common.hpp"
 #include "gtest/gtest.h"
+
+#define DBGROUP_ADD_QUOTES_INNER(x) #x                     // NOLINT
+#define DBGROUP_ADD_QUOTES(x) DBGROUP_ADD_QUOTES_INNER(x)  // NOLINT
 
 namespace dbgroup::atomic::pmwcas::test
 {
@@ -145,7 +149,9 @@ class DescriptorPoolFixture : public ::testing::Test
    * Internal member variables
    *##################################################################################*/
 
-  DescriptorPool pool_{};
+  const std::string descriptor_pool_path_ = DBGROUP_ADD_QUOTES(PMWCAS_TEST_DESCRIPTOR_POOL_PATH);
+
+  DescriptorPool pool_{descriptor_pool_path_, "pmwcas_descriptor_pool"};
 
   std::mutex x_mtx_{};
 

@@ -20,6 +20,8 @@ endif()
 # settings on Windows
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 
+set(PMWCAS_TEST_DESCRIPTOR_POOL_PATH "/tmp/pmwcas-test-nishimura" CACHE STRING "The path where the descriptor pool is persisted.")
+
 # Add googletest directly to our build. This defines
 # the gtest and gtest_main targets.
 add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
@@ -48,6 +50,9 @@ function(ADD_PMWCAS_TEST PMWCAS_TEST_TARGET)
   target_link_libraries(${PMWCAS_TEST_TARGET} PRIVATE
     pmwcas
     gtest_main
+  )
+  target_compile_definitions(${PMWCAS_TEST_TARGET} PRIVATE
+  PMWCAS_TEST_DESCRIPTOR_POOL_PATH=${PMWCAS_TEST_DESCRIPTOR_POOL_PATH}
   )
 
   if(DEFINED PMWCAS_TEST_THREAD_NUM)
