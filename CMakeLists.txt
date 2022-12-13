@@ -37,10 +37,6 @@ set(PMWCAS_CAPACITY "4" CACHE STRING "The maximum number of target words for PMw
 
 set(PMWCAS_DESCRIPTOR_POOL_SIZE "8" CACHE STRING "The maximum descriptor pool size.")
 
-#set(PMWCAS_DESCRIPTOR_POOL_PATH "/tmp/pmwcas-test-nishimura" CACHE STRING "The path where the descriptor pool is persisted.")
-
-#set(PATH_WITH_DOUBLE_QUOTATION "\"${PMWCAS_DESCRIPTOR_POOL_PATH}\"")
-
 set(PMWCAS_RETRY_THRESHOLD "10" CACHE STRING "The maximum number of retries for preventing busy loops.")
 
 set(PMWCAS_SLEEP_TIME "10" CACHE STRING "A sleep time for preventing busy loops [us].")

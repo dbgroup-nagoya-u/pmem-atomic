@@ -96,8 +96,7 @@ class DescriptorPool
               reserve_arr_[i].compare_exchange_strong(is_reserved, true, std::memory_order_relaxed);
           if (is_changed) {
             auto root = pmem_pool_.root();
-            ptr =
-                std::make_unique<ElementHolder>(i, reserve_arr_, &(root->descriptors[i].get_rw()));
+            ptr = std::make_unique<ElementHolder>(i, reserve_arr_, &(root->descriptors[i]));
             break;
           }
         }
@@ -114,7 +113,7 @@ class DescriptorPool
 
   /// Descriptor pool array
   struct DescArray {
-    ::pmem::obj::p<PMwCASDescriptor> descriptors[kDescriptorPoolSize]{};
+    PMwCASDescriptor descriptors[kDescriptorPoolSize]{};
   };
 
   /*####################################################################################
