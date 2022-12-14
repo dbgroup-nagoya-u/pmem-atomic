@@ -9,6 +9,7 @@ buildType:
       settings:
         CMAKE_CXX_CLANG_TIDY: "clang-tidy"
         PMWCAS_BUILD_TESTS: ON
+        PMWCAS_TEST_DESCRIPTOR_POOL_PATH: /data2/pmwcas_test/test-debug
     relWithDebInfo:
       short: RelWithDebInfo
       long: Perform optimizations and include debugging informatin
@@ -16,6 +17,7 @@ buildType:
       settings:
         CMAKE_CXX_CLANG_TIDY: "clang-tidy"
         PMWCAS_BUILD_TESTS: ON
+        PMWCAS_TEST_DESCRIPTOR_POOL_PATH: /data2/pmwcas_test/test-rel_with_deb_info
     release:
       short: Release
       long: Perform optimizations and omit debugging informatin
@@ -23,3 +25,4 @@ buildType:
       settings:
         CMAKE_CXX_CLANG_TIDY: "clang-tidy"
         PMWCAS_BUILD_TESTS: ON
+        PMWCAS_TEST_DESCRIPTOR_POOL_PATH: /data2/pmwcas_test/test-release
