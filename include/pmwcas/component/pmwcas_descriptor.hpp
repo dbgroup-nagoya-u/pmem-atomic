@@ -177,6 +177,7 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
     }
 
     if (succeeded) {
+      pmem_persist(&targets_[0], sizeof(PMwCASTarget) * embedded_count);
       status_ = DescStatus::kSucceeded;
       pmem_persist(&status_, sizeof_status);
     }

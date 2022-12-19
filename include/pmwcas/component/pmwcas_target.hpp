@@ -105,10 +105,7 @@ class PMwCASTarget
       SPINLOCK_HINT
     }
 
-    if (expected != old_val_) return false;
-
-    pmem_persist(addr_, sizeof(std::atomic<PMwCASField>));
-    return true;
+    return expected == old_val_;
   }
 
   /**

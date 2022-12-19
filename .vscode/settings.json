@@ -154,6 +154,7 @@
     "cfenv": "cpp",
     "typeindex": "cpp",
     "valarray": "cpp",
-    "source_location": "cpp"
+    "source_location": "cpp",
+    "*.ipp": "cpp"
   },
 }
