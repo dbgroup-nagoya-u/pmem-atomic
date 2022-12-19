@@ -23,6 +23,9 @@
 #include <thread>
 #include <utility>
 
+// libraries for managing persistem memory
+#include <libpmem.h>
+
 #include "pmwcas_target.hpp"
 
 namespace dbgroup::atomic::pmwcas
@@ -140,6 +143,8 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
     assert(target_count_ < kPMwCASCapacity);
 
     targets_[target_count_++] = PMwCASTarget{addr, old_val, new_val, fence};
+    pmem_persist(&target_count_, sizeof(target_count_));
+    pmem_persist(&targets_, sizeof(targets_));
   }
 
   /**
@@ -153,9 +158,11 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
       -> bool
   {
     const PMwCASField desc_addr{this, kDescriptorFlag};
+    const auto sizeof_status = sizeof(status_);
 
-    // initialize PMwCAS status
+    // initialize and persist PMwCAS status
     status_ = DescStatus::kUndecided;
+    pmem_persist(&status_, sizeof_status);
     auto succeeded = true;
 
     // serialize PMwCAS operations by embedding a descriptor
@@ -171,6 +178,7 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
 
     if (succeeded) {
       status_ = DescStatus::kSucceeded;
+      pmem_persist(&status_, sizeof_status);
     }
 
     // complete PMwCAS
@@ -185,6 +193,7 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
     }
 
     status_ = DescStatus::kFinished;
+    pmem_persist(&status_, sizeof_status);
 
     return succeeded;
   }

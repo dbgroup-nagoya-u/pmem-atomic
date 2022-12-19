@@ -22,8 +22,9 @@ find_package(Threads)
 # load the module to use pkg-config
 find_package(PkgConfig)
 
-# search library with pkg-config and name its results "LIBPMEMOBJ++"
+# search library with pkg-config and name its results "LIBPMEMOBJ++" and "LIBPMEM"
 pkg_check_modules(LIBPMEMOBJ++ REQUIRED libpmemobj++)
+pkg_check_modules(LIBPMEM REQUIRED libpmem)
 
 # check SSE support for spinlock hints
 include(CheckIncludeFileCXX)
@@ -54,6 +55,7 @@ if(NOT TARGET pmwcas::pmwcas)
   target_include_directories(pmwcas INTERFACE
     "${PMWCAS_SOURCE_DIR}/include"
     "${LIBPMEMOBJ++_INCLUDE_DIRS}"
+    "${LIBPMEM_INCLUDE_DIRS}"
   )
   target_compile_definitions(pmwcas INTERFACE
     PMWCAS_CAPACITY=${PMWCAS_CAPACITY}
@@ -66,6 +68,7 @@ if(NOT TARGET pmwcas::pmwcas)
   target_link_libraries(pmwcas INTERFACE
   Threads::Threads
   ${LIBPMEMOBJ++_LIBRARIES}
+  ${LIBPMEM_LIBRARIES}
 )
 endif()
 
