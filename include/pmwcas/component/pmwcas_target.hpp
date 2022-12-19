@@ -19,6 +19,9 @@
 
 #include <atomic>
 
+// libraries for managing persistent memory
+#include <libpmem.h>
+
 #include "pmwcas_field.hpp"
 
 namespace dbgroup::atomic::pmwcas::component
@@ -102,7 +105,10 @@ class PMwCASTarget
       SPINLOCK_HINT
     }
 
-    return expected == old_val_;
+    if (expected != old_val_) return false;
+
+    pmem_persist(addr_, sizeof(std::atomic<PMwCASField>));
+    return true;
   }
 
   /**
@@ -113,7 +119,9 @@ class PMwCASTarget
   RedoPMwCAS()
   {
     addr_->store(new_val_.GetCopyWithDirtyFlag(), std::memory_order_relaxed);
+    pmem_persist(addr_, sizeof(std::atomic<PMwCASField>));
     addr_->store(new_val_, fence_);
+    pmem_persist(addr_, sizeof(std::atomic<PMwCASField>));
   }
 
   /**
@@ -124,7 +132,9 @@ class PMwCASTarget
   UndoPMwCAS()
   {
     addr_->store(old_val_.GetCopyWithDirtyFlag(), std::memory_order_relaxed);
+    pmem_persist(addr_, sizeof(std::atomic<PMwCASField>));
     addr_->store(old_val_, std::memory_order_relaxed);
+    pmem_persist(addr_, sizeof(std::atomic<PMwCASField>));
   }
 
  private:
