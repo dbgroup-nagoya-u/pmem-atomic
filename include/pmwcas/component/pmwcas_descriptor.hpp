@@ -23,7 +23,7 @@
 #include <thread>
 #include <utility>
 
-// libraries for managing persistem memory
+// libraries for managing persistent memory
 #include <libpmem.h>
 
 #include "pmwcas_target.hpp"
