@@ -22,9 +22,10 @@ find_package(Threads)
 # load the module to use pkg-config
 find_package(PkgConfig)
 
-# search library with pkg-config and name its results "LIBPMEMOBJ++" and "LIBPMEM"
-pkg_check_modules(LIBPMEMOBJ++ REQUIRED libpmemobj++)
+# search library with pkg-config and name its results "LIBPMEM" and "LIBPMEMOBJ++"
 pkg_check_modules(LIBPMEM REQUIRED libpmem)
+pkg_check_modules(LIBPMEMOBJ++ REQUIRED libpmemobj++)
+
 
 # check SSE support for spinlock hints
 include(CheckIncludeFileCXX)

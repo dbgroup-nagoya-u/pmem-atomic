@@ -109,16 +109,26 @@ class PMwCASTarget
   }
 
   /**
-   * @brief Update/revert a value of this target address.
+   * @brief Flush a value of this target address.
+   *
+   */
+  void
+  Flush()
+  {
+    pmem_flush(addr_, kWordSize);
+  }
+
+  /**
+   * @brief Update a value of this target address.
    *
    */
   void
   RedoPMwCAS()
   {
     addr_->store(new_val_.GetCopyWithDirtyFlag(), std::memory_order_relaxed);
-    pmem_persist(addr_, sizeof(std::atomic<PMwCASField>));
+    pmem_persist(addr_, kWordSize);
     addr_->store(new_val_, fence_);
-    pmem_persist(addr_, sizeof(std::atomic<PMwCASField>));
+    pmem_persist(addr_, kWordSize);
   }
 
   /**
@@ -129,9 +139,9 @@ class PMwCASTarget
   UndoPMwCAS()
   {
     addr_->store(old_val_.GetCopyWithDirtyFlag(), std::memory_order_relaxed);
-    pmem_persist(addr_, sizeof(std::atomic<PMwCASField>));
+    pmem_persist(addr_, kWordSize);
     addr_->store(old_val_, std::memory_order_relaxed);
-    pmem_persist(addr_, sizeof(std::atomic<PMwCASField>));
+    pmem_persist(addr_, kWordSize);
   }
 
  private:

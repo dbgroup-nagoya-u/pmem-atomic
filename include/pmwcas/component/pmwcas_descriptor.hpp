@@ -143,8 +143,6 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
     assert(target_count_ < kPMwCASCapacity);
 
     targets_[target_count_++] = PMwCASTarget{addr, old_val, new_val, fence};
-    pmem_persist(&target_count_, sizeof(target_count_));
-    pmem_persist(&targets_, sizeof(targets_));
   }
 
   /**
@@ -158,11 +156,11 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
       -> bool
   {
     const PMwCASField desc_addr{this, kDescriptorFlag};
-    const auto sizeof_status = sizeof(status_);
+    constexpr size_t kStatusSize = 1;
 
     // initialize and persist PMwCAS status
     status_ = DescStatus::kUndecided;
-    pmem_persist(&status_, sizeof_status);
+    pmem_persist(this, sizeof(PMwCASDescriptor));
     auto succeeded = true;
 
     // serialize PMwCAS operations by embedding a descriptor
@@ -177,9 +175,12 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
     }
 
     if (succeeded) {
-      pmem_persist(&targets_[0], sizeof(PMwCASTarget) * embedded_count);
+      for (size_t i = 0; i < target_count_; ++i) {
+        targets_[i].Flush();
+      }
       status_ = DescStatus::kSucceeded;
-      pmem_persist(&status_, sizeof_status);
+      pmem_flush(&status_, kStatusSize);
+      pmem_drain();
     }
 
     // complete PMwCAS
@@ -194,7 +195,7 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
     }
 
     status_ = DescStatus::kFinished;
-    pmem_persist(&status_, sizeof_status);
+    pmem_persist(&status_, kStatusSize);
 
     return succeeded;
   }
