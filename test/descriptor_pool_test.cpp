@@ -32,6 +32,14 @@
 
 namespace dbgroup::atomic::pmwcas::test
 {
+/*######################################################################################
+ * Global constants
+ *####################################################################################*/
+
+constexpr std::string_view kTmpPMEMPath = DBGROUP_ADD_QUOTES(PMWCAS_TEST_DESCRIPTOR_POOL_PATH);
+constexpr const char *kPoolName = "pmwcas_test";
+constexpr const char *kLayout = "pmwcas_descriptor_pool";
+
 class DescriptorPoolFixture : public ::testing::Test
 {
  protected:
@@ -42,6 +50,19 @@ class DescriptorPoolFixture : public ::testing::Test
   void
   SetUp() override
   {
+    try {
+      const std::string user_name{std::getenv("USER")};
+      std::filesystem::path pool_path{kTmpPMEMPath};
+      pool_path /= user_name;
+      std::filesystem::create_directories(pool_path);
+      pool_path /= kPoolName;
+      std::filesystem::remove(pool_path);
+
+      pool_ = new DescriptorPool(pool_path, kLayout);
+    } catch (const std::exception &e) {
+      std::cerr << e.what() << std::endl;
+      std::terminate();
+    }
   }
 
   void
@@ -56,8 +77,8 @@ class DescriptorPoolFixture : public ::testing::Test
   void
   RunInOneThread()
   {
-    auto *desc_1 = pool_.Get();
-    auto *desc_2 = pool_.Get();
+    auto *desc_1 = pool_->Get();
+    auto *desc_2 = pool_->Get();
 
     // check if they are the same descriptor
     EXPECT_EQ(desc_1, desc_2);
@@ -136,7 +157,7 @@ class DescriptorPoolFixture : public ::testing::Test
   GetDescriptor(std::promise<PMwCASDescriptor *> p)
   {
     std::shared_lock guard{s_mtx_};
-    auto *desc = pool_.Get();
+    auto *desc = pool_->Get();
     p.set_value(desc);
     {
       std::unique_lock lock{x_mtx_};
@@ -149,9 +170,7 @@ class DescriptorPoolFixture : public ::testing::Test
    * Internal member variables
    *##################################################################################*/
 
-  const std::string descriptor_pool_path_ = DBGROUP_ADD_QUOTES(PMWCAS_TEST_DESCRIPTOR_POOL_PATH);
-
-  DescriptorPool pool_{descriptor_pool_path_, "pmwcas_descriptor_pool"};
+  DescriptorPool *pool_;
 
   std::mutex x_mtx_{};
 

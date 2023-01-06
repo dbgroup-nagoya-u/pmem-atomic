@@ -20,7 +20,7 @@ endif()
 # settings on Windows
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 
-set(PMWCAS_TEST_DESCRIPTOR_POOL_PATH "/tmp/pmwcas-test-nishimura" CACHE STRING "The path where the descriptor pool is persisted.")
+set(PMWCAS_TEST_DESCRIPTOR_POOL_PATH "/tmp" CACHE STRING "The path where the descriptor pool is persisted.")
 
 # Add googletest directly to our build. This defines
 # the gtest and gtest_main targets.
