@@ -14,17 +14,47 @@
  * limitations under the License.
  */
 
+// the corresponding header
 #include "pmwcas/component/pmwcas_target.hpp"
 
-#include "common.hpp"
+// C++ standard libraries
+#include <filesystem>
+
+// external system libraries
+#include <libpmemobj++/p.hpp>
+#include <libpmemobj++/persistent_ptr.hpp>
+#include <libpmemobj++/pool.hpp>
+#include <libpmemobj++/transaction.hpp>
+
+// external libraries
 #include "gtest/gtest.h"
+
+// local sources
+#include "common.hpp"
 
 namespace dbgroup::atomic::pmwcas::component::test
 {
+/*######################################################################################
+ * Global constants
+ *####################################################################################*/
+
+constexpr std::string_view kTmpPMEMPath = DBGROUP_ADD_QUOTES(DBGROUP_TEST_TMP_PMEM_PATH);
+constexpr const char *kPoolName = "pmwcas_pmwcas_target_test";
+constexpr const char *kLayout = "target";
+constexpr auto kModeRW = S_IRUSR | S_IWUSR;  // NOLINT
+
 template <class Target>
 class PMwCASTargetFixture : public ::testing::Test
 {
  protected:
+  /*####################################################################################
+   * Internal classes
+   *##################################################################################*/
+
+  struct PMEMRoot {
+    ::pmem::obj::p<Target> target{};
+  };
+
   /*####################################################################################
    * Setup/Teardown
    *##################################################################################*/
@@ -39,9 +69,32 @@ class PMwCASTargetFixture : public ::testing::Test
       old_val_ = 1;
       new_val_ = 2;
     }
-    target_ = old_val_;
 
-    pmwcas_target_ = PMwCASTarget{&target_, old_val_, new_val_, std::memory_order_relaxed};
+    try {
+      // create a user directory for testing
+      const std::string user_name{std::getenv("USER")};
+      std::filesystem::path pool_path{kTmpPMEMPath};
+      pool_path /= user_name;
+      std::filesystem::create_directories(pool_path);
+      pool_path /= kPoolName;
+      std::filesystem::remove(pool_path);
+
+      // create a persistent pool for testing
+      constexpr size_t kSize = PMEMOBJ_MIN_POOL * 2;
+      pool_ = ::pmem::obj::pool<PMEMRoot>::create(pool_path, kLayout, kSize, kModeRW);
+
+      // allocate regions on persistent memory
+      ::pmem::obj::transaction::run(pool_, [&] {
+        auto &&root = pool_.root();
+        root->target = old_val_;
+      });
+    } catch (const std::exception &e) {
+      std::cerr << e.what() << std::endl;
+      std::terminate();
+    }
+
+    auto *addr = &(pool_.root()->target);
+    pmwcas_target_ = PMwCASTarget{addr, old_val_, new_val_, std::memory_order_relaxed};
     desc_ = PMwCASField{0UL, true};
   }
 
@@ -52,6 +105,8 @@ class PMwCASTargetFixture : public ::testing::Test
       delete old_val_;
       delete new_val_;
     }
+
+    pool_.close();
   }
 
   /*####################################################################################
@@ -61,8 +116,9 @@ class PMwCASTargetFixture : public ::testing::Test
   void
   VerifyEmbedDescriptor(const bool expect_fail)
   {
+    auto &target = pool_.root()->target.get_rw();
     if (expect_fail) {
-      target_ = new_val_;
+      target = new_val_;
     }
 
     const bool result = pmwcas_target_.EmbedDescriptor(desc_);
@@ -70,11 +126,11 @@ class PMwCASTargetFixture : public ::testing::Test
     if (expect_fail) {
       EXPECT_FALSE(result);
       EXPECT_NE(CASTargetConverter<PMwCASField>{desc_}.converted_data,  // NOLINT
-                CASTargetConverter<Target>{target_}.converted_data);    // NOLINT
+                CASTargetConverter<Target>{target}.converted_data);     // NOLINT
     } else {
       EXPECT_TRUE(result);
       EXPECT_EQ(CASTargetConverter<PMwCASField>{desc_}.converted_data,  // NOLINT
-                CASTargetConverter<Target>{target_}.converted_data);    // NOLINT
+                CASTargetConverter<Target>{target}.converted_data);     // NOLINT
     }
   }
 
@@ -83,12 +139,13 @@ class PMwCASTargetFixture : public ::testing::Test
   {
     ASSERT_TRUE(pmwcas_target_.EmbedDescriptor(desc_));
 
+    auto &target = pool_.root()->target.get_rw();
     if (succeeded) {
       pmwcas_target_.RedoPMwCAS();
-      EXPECT_EQ(new_val_, target_);
+      EXPECT_EQ(new_val_, target);
     } else {
       pmwcas_target_.UndoPMwCAS();
-      EXPECT_EQ(old_val_, target_);
+      EXPECT_EQ(old_val_, target);
     }
   }
 
@@ -97,10 +154,11 @@ class PMwCASTargetFixture : public ::testing::Test
    * Internal member variables
    *##################################################################################*/
 
-  PMwCASTarget pmwcas_target_;
-  PMwCASField desc_;
+  ::pmem::obj::pool<PMEMRoot> pool_{};
 
-  Target target_{};
+  PMwCASTarget pmwcas_target_{};
+  PMwCASField desc_{};
+
   Target old_val_{};
   Target new_val_{};
 };

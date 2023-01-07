@@ -27,9 +27,6 @@
 #include "common.hpp"
 #include "gtest/gtest.h"
 
-#define DBGROUP_ADD_QUOTES_INNER(x) #x                     // NOLINT
-#define DBGROUP_ADD_QUOTES(x) DBGROUP_ADD_QUOTES_INNER(x)  // NOLINT
-
 namespace dbgroup::atomic::pmwcas::test
 {
 /*######################################################################################
@@ -37,7 +34,7 @@ namespace dbgroup::atomic::pmwcas::test
  *####################################################################################*/
 
 constexpr std::string_view kTmpPMEMPath = DBGROUP_ADD_QUOTES(DBGROUP_TEST_TMP_PMEM_PATH);
-constexpr const char *kPoolName = "pmwcas_test";
+constexpr const char *kPoolName = "pmwcas_descriptor_pool_test";
 constexpr const char *kLayout = "pmwcas_descriptor_pool";
 
 class DescriptorPoolFixture : public ::testing::Test

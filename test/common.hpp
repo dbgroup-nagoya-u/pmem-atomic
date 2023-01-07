@@ -21,6 +21,9 @@
 
 #include "pmwcas/utility.hpp"
 
+#define DBGROUP_ADD_QUOTES_INNER(x) #x                     // NOLINT
+#define DBGROUP_ADD_QUOTES(x) DBGROUP_ADD_QUOTES_INNER(x)  // NOLINT
+
 constexpr size_t kThreadNum = DBGROUP_TEST_THREAD_NUM;
 
 /**
