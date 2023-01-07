@@ -17,12 +17,17 @@
 #ifndef PMWCAS_PMWCAS_DESCRIPTOR_HPP
 #define PMWCAS_PMWCAS_DESCRIPTOR_HPP
 
+// C++ standard libraries
 #include <array>
 #include <atomic>
 #include <chrono>
 #include <thread>
 #include <utility>
 
+// external system libraries
+#include <libpmem.h>
+
+// local sources
 #include "pmwcas_target.hpp"
 
 namespace dbgroup::atomic::pmwcas
@@ -53,8 +58,8 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
   constexpr PMwCASDescriptor() = default;
 
   constexpr PMwCASDescriptor(const PMwCASDescriptor &) = default;
-  constexpr auto operator=(const PMwCASDescriptor &obj) -> PMwCASDescriptor & = default;
   constexpr PMwCASDescriptor(PMwCASDescriptor &&) = default;
+  constexpr auto operator=(const PMwCASDescriptor &obj) -> PMwCASDescriptor & = default;
   constexpr auto operator=(PMwCASDescriptor &&) -> PMwCASDescriptor & = default;
 
   /*####################################################################################
@@ -153,9 +158,11 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
       -> bool
   {
     const PMwCASField desc_addr{this, kDescriptorFlag};
+    constexpr size_t kStatusSize = 1;
 
-    // initialize PMwCAS status
+    // initialize and persist PMwCAS status
     status_ = DescStatus::kUndecided;
+    pmem_persist(this, sizeof(PMwCASDescriptor));
     auto succeeded = true;
 
     // serialize PMwCAS operations by embedding a descriptor
@@ -170,7 +177,12 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
     }
 
     if (succeeded) {
+      for (size_t i = 0; i < target_count_; ++i) {
+        targets_[i].Flush();
+      }
       status_ = DescStatus::kSucceeded;
+      pmem_flush(&status_, kStatusSize);
+      pmem_drain();
     }
 
     // complete PMwCAS
@@ -185,6 +197,7 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
     }
 
     status_ = DescStatus::kFinished;
+    pmem_persist(&status_, kStatusSize);
 
     return succeeded;
   }

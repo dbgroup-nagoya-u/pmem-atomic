@@ -17,6 +17,10 @@
 #ifndef PMWCAS_COMPONENT_COMMON_HPP
 #define PMWCAS_COMPONENT_COMMON_HPP
 
+// C++ standard libraries
+#include <atomic>
+
+// external system libraries
 #ifndef SPINLOCK_HINT
 #ifdef PMWCAS_HAS_SPINLOCK_HINT
 #include <xmmintrin.h>
@@ -26,8 +30,7 @@
 #endif
 #endif
 
-#include <atomic>
-
+// local sources
 #include "pmwcas/utility.hpp"
 
 namespace dbgroup::atomic::pmwcas::component

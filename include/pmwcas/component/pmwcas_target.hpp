@@ -17,8 +17,14 @@
 #ifndef PMWCAS_COMPONENT_PMWCAS_TARGET_HPP
 #define PMWCAS_COMPONENT_PMWCAS_TARGET_HPP
 
+// C++ standard libraries
 #include <atomic>
 
+// external system libraries
+#include <libpmem.h>
+#include <libpmemobj.h>
+
+// local sources
 #include "pmwcas_field.hpp"
 
 namespace dbgroup::atomic::pmwcas::component
@@ -54,16 +60,13 @@ class PMwCASTarget
       const T old_val,
       const T new_val,
       const std::memory_order fence)
-      : addr_{static_cast<std::atomic<PMwCASField> *>(addr)},
-        old_val_{old_val},
-        new_val_{new_val},
-        fence_{fence}
+      : oid_{pmemobj_oid(addr)}, old_val_{old_val}, new_val_{new_val}, fence_{fence}
   {
   }
 
   constexpr PMwCASTarget(const PMwCASTarget &) = default;
-  constexpr auto operator=(const PMwCASTarget &obj) -> PMwCASTarget & = default;
   constexpr PMwCASTarget(PMwCASTarget &&) = default;
+  constexpr auto operator=(const PMwCASTarget &obj) -> PMwCASTarget & = default;
   constexpr auto operator=(PMwCASTarget &&) -> PMwCASTarget & = default;
 
   /*####################################################################################
@@ -91,10 +94,11 @@ class PMwCASTarget
   EmbedDescriptor(const PMwCASField desc_addr)  //
       -> bool
   {
+    auto *addr = static_cast<std::atomic<PMwCASField> *>(pmemobj_direct(oid_));
     PMwCASField expected = old_val_;
     for (size_t i = 0; true; ++i) {
       // try to embed a PMwCAS descriptor
-      addr_->compare_exchange_strong(expected, desc_addr, std::memory_order_relaxed);
+      addr->compare_exchange_strong(expected, desc_addr, std::memory_order_relaxed);
       if (!expected.IsPMwCASDescriptor() || !expected.IsNotPersisted() || i >= kRetryNum) break;
 
       // retry if another descriptor is embedded
@@ -106,14 +110,28 @@ class PMwCASTarget
   }
 
   /**
-   * @brief Update/revert a value of this target address.
+   * @brief Flush a value of this target address.
+   *
+   */
+  void
+  Flush()
+  {
+    auto *addr = static_cast<std::atomic<PMwCASField> *>(pmemobj_direct(oid_));
+    pmem_flush(addr, kWordSize);
+  }
+
+  /**
+   * @brief Update a value of this target address.
    *
    */
   void
   RedoPMwCAS()
   {
-    addr_->store(new_val_.GetCopyWithDirtyFlag(), std::memory_order_relaxed);
-    addr_->store(new_val_, fence_);
+    auto *addr = static_cast<std::atomic<PMwCASField> *>(pmemobj_direct(oid_));
+    addr->store(new_val_.GetCopyWithDirtyFlag(), std::memory_order_relaxed);
+    pmem_persist(addr, kWordSize);
+    addr->store(new_val_, fence_);
+    pmem_persist(addr, kWordSize);
   }
 
   /**
@@ -123,8 +141,11 @@ class PMwCASTarget
   void
   UndoPMwCAS()
   {
-    addr_->store(old_val_.GetCopyWithDirtyFlag(), std::memory_order_relaxed);
-    addr_->store(old_val_, std::memory_order_relaxed);
+    auto *addr = static_cast<std::atomic<PMwCASField> *>(pmemobj_direct(oid_));
+    addr->store(old_val_.GetCopyWithDirtyFlag(), std::memory_order_relaxed);
+    pmem_persist(addr, kWordSize);
+    addr->store(old_val_, std::memory_order_relaxed);
+    pmem_persist(addr, kWordSize);
   }
 
  private:
@@ -133,7 +154,7 @@ class PMwCASTarget
    *##################################################################################*/
 
   /// A target memory address
-  std::atomic<PMwCASField> *addr_{};
+  PMEMoid oid_{};
 
   /// An expected value of a target field
   PMwCASField old_val_{};

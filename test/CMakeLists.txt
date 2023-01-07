@@ -2,31 +2,29 @@
 # Configure GoogleTest
 #--------------------------------------------------------------------------------------#
 
-configure_file(CMakeLists-googletest.txt.in googletest-download/CMakeLists.txt)
-execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
-  RESULT_VARIABLE result
-  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/googletest-download )
-if(result)
-  message(FATAL_ERROR "CMake step for googletest failed: ${result}")
-endif()
-execute_process(COMMAND ${CMAKE_COMMAND} --build .
-  RESULT_VARIABLE result
-  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/googletest-download )
-if(result)
-  message(FATAL_ERROR "Build step for googletest failed: ${result}")
-endif()
+include(FetchContent)
+FetchContent_Declare(
+  googletest
+  GIT_REPOSITORY "https://github.com/google/googletest.git"
+  GIT_TAG "58d77fa8070e8cec2dc1ed015d66b454c8d78850" # v1.12.1
+)
+FetchContent_MakeAvailable(googletest)
 
-# Prevent overriding the parent project's compiler/linker
-# settings on Windows
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+#--------------------------------------------------------------------------------------#
+# Configurations for unit tests
+#--------------------------------------------------------------------------------------#
 
-set(PMWCAS_TEST_DESCRIPTOR_POOL_PATH "/tmp/pmwcas-test-nishimura" CACHE STRING "The path where the descriptor pool is persisted.")
+set(
+  DBGROUP_TEST_THREAD_NUM
+  "8" CACHE STRING
+  "The number of worker threads for testing."
+)
 
-# Add googletest directly to our build. This defines
-# the gtest and gtest_main targets.
-add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
-                 ${CMAKE_CURRENT_BINARY_DIR}/googletest-build
-                 EXCLUDE_FROM_ALL)
+set(
+  DBGROUP_TEST_TMP_PMEM_PATH
+  "/tmp" CACHE STRING
+  "The path to a durable storage."
+)
 
 #--------------------------------------------------------------------------------------#
 # Build Unit Tests
@@ -49,17 +47,12 @@ function(ADD_PMWCAS_TEST PMWCAS_TEST_TARGET)
   )
   target_link_libraries(${PMWCAS_TEST_TARGET} PRIVATE
     pmwcas
-    gtest_main
+    GTest::gtest_main
   )
   target_compile_definitions(${PMWCAS_TEST_TARGET} PRIVATE
-  PMWCAS_TEST_DESCRIPTOR_POOL_PATH=${PMWCAS_TEST_DESCRIPTOR_POOL_PATH}
+    DBGROUP_TEST_THREAD_NUM=${DBGROUP_TEST_THREAD_NUM}
+    DBGROUP_TEST_TMP_PMEM_PATH=${DBGROUP_TEST_TMP_PMEM_PATH}
   )
-
-  if(DEFINED PMWCAS_TEST_THREAD_NUM)
-    target_compile_definitions(${PMWCAS_TEST_TARGET} PRIVATE
-      PMWCAS_TEST_THREAD_NUM=${PMWCAS_TEST_THREAD_NUM}
-    )
-  endif()
 
   add_test(NAME ${PMWCAS_TEST_TARGET} COMMAND $<TARGET_FILE:${PMWCAS_TEST_TARGET}>)
 endfunction()

@@ -27,11 +27,16 @@
 #include "common.hpp"
 #include "gtest/gtest.h"
 
-#define DBGROUP_ADD_QUOTES_INNER(x) #x                     // NOLINT
-#define DBGROUP_ADD_QUOTES(x) DBGROUP_ADD_QUOTES_INNER(x)  // NOLINT
-
 namespace dbgroup::atomic::pmwcas::test
 {
+/*######################################################################################
+ * Global constants
+ *####################################################################################*/
+
+constexpr std::string_view kTmpPMEMPath = DBGROUP_ADD_QUOTES(DBGROUP_TEST_TMP_PMEM_PATH);
+constexpr const char *kPoolName = "pmwcas_descriptor_pool_test";
+constexpr const char *kLayout = "pmwcas_descriptor_pool";
+
 class DescriptorPoolFixture : public ::testing::Test
 {
  protected:
@@ -42,6 +47,19 @@ class DescriptorPoolFixture : public ::testing::Test
   void
   SetUp() override
   {
+    try {
+      const std::string user_name{std::getenv("USER")};
+      std::filesystem::path pool_path{kTmpPMEMPath};
+      pool_path /= user_name;
+      std::filesystem::create_directories(pool_path);
+      pool_path /= kPoolName;
+      std::filesystem::remove(pool_path);
+
+      pool_ = std::make_unique<DescriptorPool>(pool_path, kLayout);
+    } catch (const std::exception &e) {
+      std::cerr << e.what() << std::endl;
+      std::terminate();
+    }
   }
 
   void
@@ -56,8 +74,8 @@ class DescriptorPoolFixture : public ::testing::Test
   void
   RunInOneThread()
   {
-    auto *desc_1 = pool_.Get();
-    auto *desc_2 = pool_.Get();
+    auto *desc_1 = pool_->Get();
+    auto *desc_2 = pool_->Get();
 
     // check if they are the same descriptor
     EXPECT_EQ(desc_1, desc_2);
@@ -89,6 +107,8 @@ class DescriptorPoolFixture : public ::testing::Test
   void
   GetAllDescriptor(const size_t pool_size)
   {
+    constexpr std::chrono::milliseconds kSleepMS{100};
+
     is_ready_ = false;
     std::vector<std::thread> threads{};
     std::vector<std::future<PMwCASDescriptor *>> futures{};
@@ -100,7 +120,7 @@ class DescriptorPoolFixture : public ::testing::Test
     }
 
     {
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      std::this_thread::sleep_for(kSleepMS);
       [[maybe_unused]] std::lock_guard s_guard{s_mtx_};
     }
 
@@ -136,7 +156,7 @@ class DescriptorPoolFixture : public ::testing::Test
   GetDescriptor(std::promise<PMwCASDescriptor *> p)
   {
     std::shared_lock guard{s_mtx_};
-    auto *desc = pool_.Get();
+    auto *desc = pool_->Get();
     p.set_value(desc);
     {
       std::unique_lock lock{x_mtx_};
@@ -149,9 +169,7 @@ class DescriptorPoolFixture : public ::testing::Test
    * Internal member variables
    *##################################################################################*/
 
-  const std::string descriptor_pool_path_ = DBGROUP_ADD_QUOTES(PMWCAS_TEST_DESCRIPTOR_POOL_PATH);
-
-  DescriptorPool pool_{descriptor_pool_path_, "pmwcas_descriptor_pool"};
+  std::unique_ptr<DescriptorPool> pool_{nullptr};
 
   std::mutex x_mtx_{};
 
@@ -159,7 +177,7 @@ class DescriptorPoolFixture : public ::testing::Test
 
   std::condition_variable cond_{};
 
-  bool is_ready_;
+  bool is_ready_{false};
 };
 
 /*######################################################################################

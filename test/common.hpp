@@ -21,11 +21,10 @@
 
 #include "pmwcas/utility.hpp"
 
-#ifdef PMWCAS_TEST_THREAD_NUM
-constexpr size_t kThreadNum = PMWCAS_TEST_THREAD_NUM;
-#else
-constexpr size_t kThreadNum = 8;
-#endif
+#define DBGROUP_ADD_QUOTES_INNER(x) #x                     // NOLINT
+#define DBGROUP_ADD_QUOTES(x) DBGROUP_ADD_QUOTES_INNER(x)  // NOLINT
+
+constexpr size_t kThreadNum = DBGROUP_TEST_THREAD_NUM;
 
 /**
  * @brief An example class to represent CAS-updatable data.

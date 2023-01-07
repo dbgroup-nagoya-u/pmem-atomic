@@ -62,10 +62,13 @@
     "Ishikawa",
     "JPNP",
     "KAKENHI",
+    "LIBPMEM",
+    "libpmemobj",
     "linearlize",
     "mwcas",
     "NCAS",
     "NOLINT",
+    "PMEM",
     "pmwcas",
     "pthread",
     "RDCSS",
@@ -154,6 +157,7 @@
     "cfenv": "cpp",
     "typeindex": "cpp",
     "valarray": "cpp",
-    "source_location": "cpp"
+    "source_location": "cpp",
+    "*.ipp": "cpp"
   },
 }
