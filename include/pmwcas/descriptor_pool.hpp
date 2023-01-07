@@ -50,8 +50,6 @@ class DescriptorPool
    * Public constructors and assignment operators
    *##################################################################################*/
 
-  DescriptorPool() = default;
-
   DescriptorPool(  //
       const std::string &path,
       const std::string &layout)

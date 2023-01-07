@@ -68,6 +68,7 @@
     "mwcas",
     "NCAS",
     "NOLINT",
+    "PMEM",
     "pmwcas",
     "pthread",
     "RDCSS",

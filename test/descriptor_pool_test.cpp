@@ -36,7 +36,7 @@ namespace dbgroup::atomic::pmwcas::test
  * Global constants
  *####################################################################################*/
 
-constexpr std::string_view kTmpPMEMPath = DBGROUP_ADD_QUOTES(PMWCAS_TEST_DESCRIPTOR_POOL_PATH);
+constexpr std::string_view kTmpPMEMPath = DBGROUP_ADD_QUOTES(DBGROUP_TEST_TMP_PMEM_PATH);
 constexpr const char *kPoolName = "pmwcas_test";
 constexpr const char *kLayout = "pmwcas_descriptor_pool";
 
@@ -58,7 +58,7 @@ class DescriptorPoolFixture : public ::testing::Test
       pool_path /= kPoolName;
       std::filesystem::remove(pool_path);
 
-      pool_ = new DescriptorPool(pool_path, kLayout);
+      pool_ = std::make_unique<DescriptorPool>(pool_path, kLayout);
     } catch (const std::exception &e) {
       std::cerr << e.what() << std::endl;
       std::terminate();
@@ -172,7 +172,7 @@ class DescriptorPoolFixture : public ::testing::Test
    * Internal member variables
    *##################################################################################*/
 
-  DescriptorPool *pool_{nullptr};
+  std::unique_ptr<DescriptorPool> pool_{nullptr};
 
   std::mutex x_mtx_{};
 
