@@ -49,10 +49,15 @@ class DescriptorPool
   /*####################################################################################
    * Public constructors and assignment operators
    *##################################################################################*/
+
+  DescriptorPool() = default;
+
   DescriptorPool(  //
       const std::string &path,
       const std::string &layout)
   {
+    constexpr auto kModifyMode = S_IRUSR | S_IWUSR;  // NOLINT
+
     // initialize reservation status
     for (size_t i = 0; i < kDescriptorPoolSize; ++i) {
       reserve_arr_[i].store(false);
@@ -65,7 +70,7 @@ class DescriptorPool
         // 途中状態のrecovery
       } else {
         constexpr size_t kSize = ((sizeof(DescArray) / PMEMOBJ_MIN_POOL) + 2) * PMEMOBJ_MIN_POOL;
-        pmem_pool_ = PmemPool_t<DescArray>::create(path, layout, kSize, S_IRUSR | S_IWUSR);
+        pmem_pool_ = PmemPool_t<DescArray>::create(path, layout, kSize, kModifyMode);
       }
     } catch (const std::exception &e) {
       std::cerr << e.what() << std::endl;
@@ -73,13 +78,23 @@ class DescriptorPool
     }
   }
 
-  DescriptorPool() = default;
+  DescriptorPool(const DescriptorPool &) = delete;
+  DescriptorPool(DescriptorPool &&) = delete;
+  auto operator=(const DescriptorPool &) -> DescriptorPool & = delete;
+  auto operator=(DescriptorPool &&) -> DescriptorPool & = delete;
 
   /*################################################################################################
    * Public destructors
    *##############################################################################################*/
 
-  ~DescriptorPool() { pmem_pool_.close(); }
+  ~DescriptorPool()
+  {
+    try {
+      pmem_pool_.close();
+    } catch (const std::exception &e) {
+      std::cerr << e.what() << std::endl;
+    }
+  }
 
   /*####################################################################################
    * Public utility functions

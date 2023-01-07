@@ -55,8 +55,8 @@ if(NOT TARGET pmwcas::pmwcas)
   )
   target_include_directories(pmwcas INTERFACE
     "${PMWCAS_SOURCE_DIR}/include"
-    "${LIBPMEMOBJ++_INCLUDE_DIRS}"
     "${LIBPMEM_INCLUDE_DIRS}"
+    "${LIBPMEMOBJ++_INCLUDE_DIRS}"
   )
   target_compile_definitions(pmwcas INTERFACE
     PMWCAS_CAPACITY=${PMWCAS_CAPACITY}
@@ -68,8 +68,8 @@ if(NOT TARGET pmwcas::pmwcas)
 
   target_link_libraries(pmwcas INTERFACE
   Threads::Threads
-  ${LIBPMEMOBJ++_LIBRARIES}
   ${LIBPMEM_LIBRARIES}
+  ${LIBPMEMOBJ++_LIBRARIES}
 )
 endif()
 

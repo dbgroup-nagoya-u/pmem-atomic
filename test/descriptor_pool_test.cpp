@@ -110,6 +110,8 @@ class DescriptorPoolFixture : public ::testing::Test
   void
   GetAllDescriptor(const size_t pool_size)
   {
+    constexpr std::chrono::milliseconds kSleepMS{100};
+
     is_ready_ = false;
     std::vector<std::thread> threads{};
     std::vector<std::future<PMwCASDescriptor *>> futures{};
@@ -121,7 +123,7 @@ class DescriptorPoolFixture : public ::testing::Test
     }
 
     {
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      std::this_thread::sleep_for(kSleepMS);
       [[maybe_unused]] std::lock_guard s_guard{s_mtx_};
     }
 
@@ -170,7 +172,7 @@ class DescriptorPoolFixture : public ::testing::Test
    * Internal member variables
    *##################################################################################*/
 
-  DescriptorPool *pool_;
+  DescriptorPool *pool_{nullptr};
 
   std::mutex x_mtx_{};
 
@@ -178,7 +180,7 @@ class DescriptorPoolFixture : public ::testing::Test
 
   std::condition_variable cond_{};
 
-  bool is_ready_;
+  bool is_ready_{false};
 };
 
 /*######################################################################################

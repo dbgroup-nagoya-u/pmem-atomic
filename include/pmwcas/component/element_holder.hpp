@@ -30,9 +30,9 @@ class ElementHolder
 
   ElementHolder(  //
       const size_t pos,
-      const std::shared_ptr<std::atomic_bool[]> &reserved_arr,
+      std::shared_ptr<std::atomic_bool[]> reserved_arr,
       PMwCASDescriptor *desc)
-      : pos_{pos}, desc_{desc}, reserved_arr_{reserved_arr}
+      : pos_{pos}, desc_{desc}, reserved_arr_{std::move(reserved_arr)}
   {
   }
 
@@ -51,7 +51,7 @@ class ElementHolder
    * Public getters
    *##################################################################################*/
 
-  constexpr auto
+  [[nodiscard]] constexpr auto
   GetHoldDescriptor() const  //
       -> PMwCASDescriptor *
   {

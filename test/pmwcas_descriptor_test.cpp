@@ -90,6 +90,7 @@ class PMwCASDescriptorFixture : public ::testing::Test
   void
   RunPMwCAS(const size_t thread_num)
   {
+    constexpr std::chrono::milliseconds kSleepMS{100};
     std::vector<std::thread> threads;
 
     {  // create a lock to prevent workers from executing
@@ -103,7 +104,7 @@ class PMwCASDescriptorFixture : public ::testing::Test
       }
 
       // wait for all workers to finish initialization
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      std::this_thread::sleep_for(kSleepMS);
       const std::unique_lock<std::shared_mutex> lock{main_lock_};
     }
 

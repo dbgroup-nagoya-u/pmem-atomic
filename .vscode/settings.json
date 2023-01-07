@@ -62,6 +62,8 @@
     "Ishikawa",
     "JPNP",
     "KAKENHI",
+    "LIBPMEM",
+    "libpmemobj",
     "linearlize",
     "mwcas",
     "NCAS",
