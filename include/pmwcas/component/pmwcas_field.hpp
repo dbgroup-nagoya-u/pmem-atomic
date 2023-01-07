@@ -17,8 +17,11 @@
 #ifndef PMWCAS_COMPONENT_PMWCAS_FIELD_HPP
 #define PMWCAS_COMPONENT_PMWCAS_FIELD_HPP
 
+// C++ standard libraries
 #include <atomic>
+#include <cstring>
 
+// local sources
 #include "common.hpp"
 
 namespace dbgroup::atomic::pmwcas::component
@@ -67,8 +70,8 @@ class PMwCASField
   }
 
   constexpr PMwCASField(const PMwCASField &) = default;
-  constexpr auto operator=(const PMwCASField &obj) -> PMwCASField & = default;
   constexpr PMwCASField(PMwCASField &&) = default;
+  constexpr auto operator=(const PMwCASField &obj) -> PMwCASField & = default;
   constexpr auto operator=(PMwCASField &&) -> PMwCASField & = default;
 
   /*####################################################################################
@@ -85,22 +88,18 @@ class PMwCASField
    * Public operators
    *##################################################################################*/
 
-  constexpr auto
+  auto
   operator==(const PMwCASField &obj) const  //
       -> bool
   {
-    return this->dirty_flag_ == obj.dirty_flag_       //
-           && this->pmwcas_flag_ == obj.pmwcas_flag_  //
-           && this->target_bit_arr_ == obj.target_bit_arr_;
+    return memcmp(this, &obj, sizeof(PMwCASField)) == 0;
   }
 
-  constexpr auto
+  auto
   operator!=(const PMwCASField &obj) const  //
       -> bool
   {
-    return this->dirty_flag_ != obj.dirty_flag_       //
-           || this->pmwcas_flag_ != obj.pmwcas_flag_  //
-           || this->target_bit_arr_ != obj.target_bit_arr_;
+    return memcmp(this, &obj, sizeof(PMwCASField)) != 0;
   }
 
   /*####################################################################################

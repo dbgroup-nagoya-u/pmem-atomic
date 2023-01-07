@@ -17,6 +17,7 @@
 #ifndef PMWCAS_UTILITY_HPP
 #define PMWCAS_UTILITY_HPP
 
+// C++ standard libraries
 #include <cassert>
 #include <chrono>
 #include <cstddef>

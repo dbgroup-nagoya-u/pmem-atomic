@@ -17,19 +17,18 @@
 #ifndef PMWCAS_DESCRIPTOR_POOL_HPP
 #define PMWCAS_DESCRIPTOR_POOL_HPP
 
+// C++ standard libraries
 #include <atomic>
 #include <filesystem>
 #include <iostream>
 #include <memory>
 #include <utility>
 
-// libraries for managing persistem memory
-#include <libpmemobj++/make_persistent.hpp>
-#include <libpmemobj++/make_persistent_atomic.hpp>
-#include <libpmemobj++/p.hpp>
+// external system libraries
 #include <libpmemobj++/persistent_ptr.hpp>
 #include <libpmemobj++/pool.hpp>
 
+// local sources
 #include "component/element_holder.hpp"
 #include "component/pmwcas_descriptor.hpp"
 
@@ -54,7 +53,7 @@ class DescriptorPool
       const std::string &path,
       const std::string &layout)
   {
-    constexpr auto kModifyMode = S_IRUSR | S_IWUSR;  // NOLINT
+    constexpr auto kModeRW = S_IRUSR | S_IWUSR;  // NOLINT
 
     // initialize reservation status
     for (size_t i = 0; i < kDescriptorPoolSize; ++i) {
@@ -68,7 +67,7 @@ class DescriptorPool
         // 途中状態のrecovery
       } else {
         constexpr size_t kSize = ((sizeof(DescArray) / PMEMOBJ_MIN_POOL) + 2) * PMEMOBJ_MIN_POOL;
-        pmem_pool_ = PmemPool_t<DescArray>::create(path, layout, kSize, kModifyMode);
+        pmem_pool_ = PmemPool_t<DescArray>::create(path, layout, kSize, kModeRW);
       }
     } catch (const std::exception &e) {
       std::cerr << e.what() << std::endl;
@@ -107,9 +106,8 @@ class DescriptorPool
       for (size_t i = 0; i < kDescriptorPoolSize; ++i) {
         auto is_reserved = reserve_arr_[i].load(std::memory_order_relaxed);
         if (!is_reserved) {
-          auto is_changed =
-              reserve_arr_[i].compare_exchange_strong(is_reserved, true, std::memory_order_relaxed);
-          if (is_changed) {
+          reserve_arr_[i].compare_exchange_strong(is_reserved, true, std::memory_order_relaxed);
+          if (!is_reserved) {
             auto root = pmem_pool_.root();
             ptr = std::make_unique<ElementHolder>(i, reserve_arr_, &(root->descriptors[i]));
             break;

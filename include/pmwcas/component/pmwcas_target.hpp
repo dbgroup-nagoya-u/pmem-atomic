@@ -17,12 +17,14 @@
 #ifndef PMWCAS_COMPONENT_PMWCAS_TARGET_HPP
 #define PMWCAS_COMPONENT_PMWCAS_TARGET_HPP
 
+// C++ standard libraries
 #include <atomic>
 
-// libraries for managing persistent memory
+// external system libraries
 #include <libpmem.h>
 #include <libpmemobj.h>
 
+// local sources
 #include "pmwcas_field.hpp"
 
 namespace dbgroup::atomic::pmwcas::component
@@ -58,16 +60,13 @@ class PMwCASTarget
       const T old_val,
       const T new_val,
       const std::memory_order fence)
-      : oid_{pmemobj_oid(addr)},
-        old_val_{old_val},
-        new_val_{new_val},
-        fence_{fence}
+      : oid_{pmemobj_oid(addr)}, old_val_{old_val}, new_val_{new_val}, fence_{fence}
   {
   }
 
   constexpr PMwCASTarget(const PMwCASTarget &) = default;
-  constexpr auto operator=(const PMwCASTarget &obj) -> PMwCASTarget & = default;
   constexpr PMwCASTarget(PMwCASTarget &&) = default;
+  constexpr auto operator=(const PMwCASTarget &obj) -> PMwCASTarget & = default;
   constexpr auto operator=(PMwCASTarget &&) -> PMwCASTarget & = default;
 
   /*####################################################################################

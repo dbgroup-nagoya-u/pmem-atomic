@@ -17,15 +17,17 @@
 #ifndef PMWCAS_PMWCAS_DESCRIPTOR_HPP
 #define PMWCAS_PMWCAS_DESCRIPTOR_HPP
 
+// C++ standard libraries
 #include <array>
 #include <atomic>
 #include <chrono>
 #include <thread>
 #include <utility>
 
-// libraries for managing persistent memory
+// external system libraries
 #include <libpmem.h>
 
+// local sources
 #include "pmwcas_target.hpp"
 
 namespace dbgroup::atomic::pmwcas
@@ -56,8 +58,8 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
   constexpr PMwCASDescriptor() = default;
 
   constexpr PMwCASDescriptor(const PMwCASDescriptor &) = default;
-  constexpr auto operator=(const PMwCASDescriptor &obj) -> PMwCASDescriptor & = default;
   constexpr PMwCASDescriptor(PMwCASDescriptor &&) = default;
+  constexpr auto operator=(const PMwCASDescriptor &obj) -> PMwCASDescriptor & = default;
   constexpr auto operator=(PMwCASDescriptor &&) -> PMwCASDescriptor & = default;
 
   /*####################################################################################

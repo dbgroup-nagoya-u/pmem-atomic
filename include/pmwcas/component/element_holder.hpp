@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
+// C++ standard libraries
 #include <atomic>
 
+// local sources
 #include "pmwcas_descriptor.hpp"
 
 namespace dbgroup::atomic::pmwcas
