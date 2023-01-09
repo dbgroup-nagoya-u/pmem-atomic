@@ -159,6 +159,19 @@ class PMwCASField
     return dirty_obj;
   }
 
+  /**
+   * @brief Remove the dirty flag.
+   *
+   */
+  [[nodiscard]] auto
+  GetCopyWithoutDirtyFlag() const  //
+      -> PMwCASField
+  {
+    auto dirty_obj = *this;
+    dirty_obj.dirty_flag_ = 0;
+    return dirty_obj;
+  }
+
  private:
   /*####################################################################################
    * Internal utility functions
