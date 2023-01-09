@@ -149,39 +149,24 @@ class PMwCASTarget
   }
 
   /**
-   * @brief Roll Forward the target.
+   * @brief Recover and flush the target.
    *
    */
   void
-  RollForward(PMwCASField desc_addr)
+  Recover(  //
+      const bool succeeded,
+      PMwCASField desc_addr)
   {
     auto *addr = static_cast<std::atomic<PMwCASField> *>(pmemobj_direct(oid_));
-    addr->compare_exchange_strong(desc_addr, new_val_, std::memory_order_relaxed);
-  }
+    const auto desired = (succeeded) ? new_val_ : old_val_;
+    addr->compare_exchange_strong(desc_addr, desired, std::memory_order_relaxed);
 
-  /**
-   * @brief Roll Back the target.
-   *
-   */
-  void
-  RollBack(PMwCASField desc_addr)
-  {
-    auto *addr = static_cast<std::atomic<PMwCASField> *>(pmemobj_direct(oid_));
-    addr->compare_exchange_strong(desc_addr, old_val_, std::memory_order_relaxed);
-  }
-
-  /**
-   * @brief Store a value without dirty flag.
-   *
-   */
-  void
-  StoreWithoutDirtyFlag()
-  {
-    auto *addr = static_cast<std::atomic<PMwCASField> *>(pmemobj_direct(oid_));
-    auto v = addr->load(std::memory_order_relaxed);
-    if (v.IsNotPersisted()) {
-      addr->store(v.GetCopyWithoutDirtyFlag(), std::memory_order_relaxed);
+    // if CAS failed, `desc_addr` has the current value
+    if (desc_addr.IsNotPersisted()) {
+      const auto v = desc_addr.GetCopyWithoutDirtyFlag();
+      addr->store(v, std::memory_order_relaxed);
     }
+    pmem_flush(addr, kWordSize);
   }
 
  private:

@@ -210,20 +210,11 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
 
     // roll forward or roll back PMwCAS
     // when the status is Finished, do nothing
-    if (status_ == DescStatus::kSucceeded) {
+    if (status_ != DescStatus::kFinished) {
+      const auto succeeded = (status_ == DescStatus::kSucceeded);
       for (size_t i = 0; i < target_count_; ++i) {
-        targets_[i].RollForward(desc_addr);
+        targets_[i].Recover(succeeded, desc_addr);
       }
-    } else if (status_ == DescStatus::kUndecided) {
-      for (size_t i = 0; i < target_count_; ++i) {
-        targets_[i].RollBack(desc_addr);
-      }
-    }
-
-    // romove dirty flag if it exists, and flush all target words
-    for (size_t i = 0; i < target_count_; ++i) {
-      targets_[i].StoreWithoutDirtyFlag();
-      targets_[i].Flush();
     }
 
     // change status and persist descriptor
