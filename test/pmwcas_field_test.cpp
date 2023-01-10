@@ -66,6 +66,9 @@ class PMwCASFieldFixture : public ::testing::Test
       EXPECT_FALSE(target_word_1.IsPMwCASDescriptor());
       auto dirty_word = target_word_1.GetCopyWithDirtyFlag();
       EXPECT_TRUE(dirty_word.IsNotPersisted());
+      auto persisted_word = dirty_word.GetCopyWithoutDirtyFlag();
+      EXPECT_FALSE(persisted_word.IsNotPersisted());
+      EXPECT_EQ(target_word_1, persisted_word);
     }
     EXPECT_EQ(data_1_, target_word_1.GetTargetData<Target>());
   }
@@ -86,7 +89,10 @@ class PMwCASFieldFixture : public ::testing::Test
     field_b = PMwCASField{data_2_, true};
     EXPECT_FALSE(field_a == field_b);
 
-    field_a = PMwCASField{data_2_, true};
+    field_a = field_a.GetCopyWithoutDirtyFlag();
+    EXPECT_FALSE(field_a == field_b);
+
+    field_b = PMwCASField{data_2_, false};
     EXPECT_TRUE(field_a == field_b);
   }
 
@@ -106,7 +112,10 @@ class PMwCASFieldFixture : public ::testing::Test
     field_b = PMwCASField{data_2_, true};
     EXPECT_TRUE(field_a != field_b);
 
-    field_a = PMwCASField{data_2_, true};
+    field_a = field_a.GetCopyWithoutDirtyFlag();
+    EXPECT_TRUE(field_a != field_b);
+
+    field_b = PMwCASField{data_2_, false};
     EXPECT_FALSE(field_a != field_b);
   }
 
