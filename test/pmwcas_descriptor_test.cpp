@@ -124,6 +124,11 @@ class PMwCASDescriptorFixture : public ::testing::Test
     EXPECT_EQ(kExecNum * thread_num * kPMwCASCapacity, sum);
   }
 
+  void
+  VerifyCompletePMwCAS()
+  {
+  }
+
  private:
   /*####################################################################################
    * Internal type aliases
@@ -237,6 +242,11 @@ TEST_F(PMwCASDescriptorFixture, PMwCASWithSingleThreadCorrectlyIncrementTargets)
 TEST_F(PMwCASDescriptorFixture, PMwCASWithMultiThreadsCorrectlyIncrementTargets)
 {
   VerifyPMwCAS(kThreadNum);
+}
+
+TEST_F(PMwCASDescriptorFixture, CompletePMwCASCorrectlyIncrementTargets)
+{
+  // VerifyCompletePMwCAS();
 }
 
 }  // namespace dbgroup::atomic::pmwcas::test

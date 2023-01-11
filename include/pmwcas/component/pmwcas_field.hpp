@@ -147,29 +147,18 @@ class PMwCASField
   }
 
   /**
-   * @brief Set the dirty flag.
+   * @brief Set or remove the dirty flag.
    *
+   * @param is_dirty a flag for whether to set the dirty bit.
    */
-  [[nodiscard]] auto
-  GetCopyWithDirtyFlag() const  //
-      -> PMwCASField
+  void
+  SetDirtyFlag(bool is_dirty)
   {
-    auto dirty_obj = *this;
-    dirty_obj.dirty_flag_ = 1;
-    return dirty_obj;
-  }
-
-  /**
-   * @brief Remove the dirty flag.
-   *
-   */
-  [[nodiscard]] auto
-  GetCopyWithoutDirtyFlag() const  //
-      -> PMwCASField
-  {
-    auto dirty_obj = *this;
-    dirty_obj.dirty_flag_ = 0;
-    return dirty_obj;
+    if (is_dirty) {
+      dirty_flag_ = 1;
+    } else {
+      dirty_flag_ = 0;
+    }
   }
 
  private:
