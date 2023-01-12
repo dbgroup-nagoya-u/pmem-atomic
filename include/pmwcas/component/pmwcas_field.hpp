@@ -154,11 +154,7 @@ class PMwCASField
   void
   SetDirtyFlag(bool is_dirty)
   {
-    if (is_dirty) {
-      dirty_flag_ = 1;
-    } else {
-      dirty_flag_ = 0;
-    }
+    dirty_flag_ = is_dirty;
   }
 
  private:
