@@ -128,7 +128,9 @@ class PMwCASTarget
   RedoPMwCAS()
   {
     auto *addr = static_cast<std::atomic<PMwCASField> *>(pmemobj_direct(oid_));
-    addr->store(new_val_.GetCopyWithDirtyFlag(), std::memory_order_relaxed);
+    auto dirty_val = new_val_;
+    dirty_val.SetDirtyFlag(true);
+    addr->store(dirty_val, std::memory_order_relaxed);
     pmem_persist(addr, kWordSize);
     addr->store(new_val_, fence_);
     pmem_persist(addr, kWordSize);
@@ -142,10 +144,34 @@ class PMwCASTarget
   UndoPMwCAS()
   {
     auto *addr = static_cast<std::atomic<PMwCASField> *>(pmemobj_direct(oid_));
-    addr->store(old_val_.GetCopyWithDirtyFlag(), std::memory_order_relaxed);
+    auto dirty_val = old_val_;
+    dirty_val.SetDirtyFlag(true);
+    addr->store(dirty_val, std::memory_order_relaxed);
     pmem_persist(addr, kWordSize);
     addr->store(old_val_, std::memory_order_relaxed);
     pmem_persist(addr, kWordSize);
+  }
+
+  /**
+   * @brief Recover and flush the target.
+   *
+   */
+  void
+  Recover(  //
+      const bool succeeded,
+      PMwCASField desc_addr)
+  {
+    auto *addr = static_cast<std::atomic<PMwCASField> *>(pmemobj_direct(oid_));
+    const auto desired = (succeeded) ? new_val_ : old_val_;
+    addr->compare_exchange_strong(desc_addr, desired, std::memory_order_relaxed);
+
+    // if CAS failed, `desc_addr` has the current value
+    if (desc_addr.IsNotPersisted()) {
+      auto val = desc_addr;
+      val.SetDirtyFlag(false);
+      addr->store(val, std::memory_order_relaxed);
+    }
+    pmem_flush(addr, kWordSize);
   }
 
  private:

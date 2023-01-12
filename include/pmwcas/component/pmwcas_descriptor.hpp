@@ -202,6 +202,27 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
     return succeeded;
   }
 
+  void
+  CompletePMwCAS()
+  {
+    const PMwCASField desc_addr{this, kDescriptorFlag};
+    constexpr size_t kStatusSize = 1;
+
+    // roll forward or roll back PMwCAS
+    // when the status is Finished, do nothing
+    if (status_ != DescStatus::kFinished) {
+      const auto succeeded = (status_ == DescStatus::kSucceeded);
+      for (size_t i = 0; i < target_count_; ++i) {
+        targets_[i].Recover(succeeded, desc_addr);
+      }
+    }
+
+    // change status and persist descriptor
+    status_ = DescStatus::kFinished;
+    pmem_flush(&status_, kStatusSize);
+    pmem_drain();
+  }
+
  private:
   /*####################################################################################
    * Internal constants

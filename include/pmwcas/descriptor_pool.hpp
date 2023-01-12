@@ -41,6 +41,7 @@ class DescriptorPool
    * Type aliases
    *##############################################################################################*/
 
+  using DescStatus = component::DescStatus;
   template <class T>
   using PmemPool_t = ::pmem::obj::pool<T>;
 
@@ -64,7 +65,7 @@ class DescriptorPool
     try {
       if (std::filesystem::exists(path)) {
         pmem_pool_ = PmemPool_t<DescArray>::open(path, layout);
-        // 途中状態のrecovery
+        Recovery();
       } else {
         constexpr size_t kSize = ((sizeof(DescArray) / PMEMOBJ_MIN_POOL) + 2) * PMEMOBJ_MIN_POOL;
         pmem_pool_ = PmemPool_t<DescArray>::create(path, layout, kSize, kModeRW);
@@ -117,6 +118,17 @@ class DescriptorPool
     }
 
     return ptr->GetHoldDescriptor();
+  }
+
+  void
+  Recovery()
+  {
+    auto root = pmem_pool_.root();
+
+    for (size_t i = 0; i < kDescriptorPoolSize; ++i) {
+      auto desc = root->descriptors[i];
+      desc.CompletePMwCAS();
+    }
   }
 
  private:

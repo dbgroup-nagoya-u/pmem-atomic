@@ -149,6 +149,21 @@ class PMwCASTargetFixture : public ::testing::Test
     }
   }
 
+  void
+  VerifyRecoverPMwCAS(const bool succeeded)
+  {
+    ASSERT_TRUE(pmwcas_target_.EmbedDescriptor(desc_));
+
+    auto &target = pool_.root()->target.get_rw();
+    pmwcas_target_.Recover(succeeded, desc_);
+
+    if (succeeded) {
+      EXPECT_EQ(new_val_, target);
+    } else {
+      EXPECT_EQ(old_val_, target);
+    }
+  }
+
  private:
   /*####################################################################################
    * Internal member variables
@@ -194,4 +209,13 @@ TYPED_TEST(PMwCASTargetFixture, CompletePMwCASWithFailedStatusRevertToExpectedVa
   TestFixture::VerifyCompletePMwCAS(false);
 }
 
+TYPED_TEST(PMwCASTargetFixture, RecoverPMwCASWithSucceededStatusRollForwardToDesiredValue)
+{
+  TestFixture::VerifyRecoverPMwCAS(false);
+}
+
+TYPED_TEST(PMwCASTargetFixture, RecoverPMwCASWithFailedStatusRollBackToExpectedValue)
+{
+  TestFixture::VerifyRecoverPMwCAS(true);
+}
 }  // namespace dbgroup::atomic::pmwcas::component::test
