@@ -36,6 +36,7 @@ class ElementHolder
       PMwCASDescriptor *desc)
       : pos_{pos}, desc_{desc}, reserved_arr_{std::move(reserved_arr)}
   {
+    desc->Reset();
   }
 
   ElementHolder(const ElementHolder &) = delete;

@@ -86,6 +86,17 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
     return target_count_;
   }
 
+  /**
+   * @brief Reset the current number of targets to zero.
+   *
+   */
+  void
+  Reset()
+  {
+    target_count_ = 0;
+    pmem_persist(&target_count_, sizeof(size_t));
+  }
+
   /*####################################################################################
    * Public utility functions
    *##################################################################################*/
@@ -196,8 +207,9 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
       }
     }
 
+    target_count_ = 0;
     status_ = DescStatus::kFinished;
-    pmem_persist(&status_, kStatusSize);
+    pmem_persist(&target_count_, sizeof(size_t) + kStatusSize);
 
     return succeeded;
   }
