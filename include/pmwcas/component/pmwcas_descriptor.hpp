@@ -124,15 +124,7 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
     while (true) {
       for (size_t i = 1; true; ++i) {
         target_word = target_addr->load(fence);
-
-        if constexpr (component::kIsDirtyFlagEnabled) {
-          if (!target_word.IsPMwCASDescriptor() || !target_word.IsNotPersisted()) {
-            return target_word.GetTargetData<T>();
-          }
-        } else {
-          if (!target_word.IsPMwCASDescriptor()) return target_word.GetTargetData<T>();
-        }
-
+        if (!target_word.IsPMwCASDescriptor()) return target_word.GetTargetData<T>();
         if (i > kRetryNum) break;
         SPINLOCK_HINT
       }

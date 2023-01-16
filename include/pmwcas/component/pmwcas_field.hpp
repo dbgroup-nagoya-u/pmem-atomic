@@ -129,7 +129,11 @@ class PMwCASField
   IsPMwCASDescriptor() const  //
       -> bool
   {
-    return pmwcas_flag_;
+    if constexpr (kIsDirtyFlagEnabled) {
+      return pmwcas_flag_ && dirty_flag_;
+    } else {
+      return pmwcas_flag_;
+    }
   }
 
   /**

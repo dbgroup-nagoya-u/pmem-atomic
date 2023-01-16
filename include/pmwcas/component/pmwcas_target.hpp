@@ -99,11 +99,7 @@ class PMwCASTarget
     for (size_t i = 0; true; ++i) {
       // try to embed a PMwCAS descriptor
       addr->compare_exchange_strong(expected, desc_addr, std::memory_order_relaxed);
-      if constexpr (kIsDirtyFlagEnabled) {
-        if (!expected.IsPMwCASDescriptor() || !expected.IsNotPersisted() || i >= kRetryNum) break;
-      } else {
-        if (!expected.IsPMwCASDescriptor() || i >= kRetryNum) break;
-      }
+      if (!expected.IsPMwCASDescriptor() || i >= kRetryNum) break;
 
       // retry if another descriptor is embedded
       expected = old_val_;
