@@ -108,7 +108,7 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
    *
    * @tparam T an expected class of a target field
    * @param addr a target memory address to read
-   * * @param fence a flag for controling std::memory_order.
+   * @param fence a flag for controling std::memory_order.
    * @return a read value
    */
   template <class T>
@@ -124,7 +124,15 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
     while (true) {
       for (size_t i = 1; true; ++i) {
         target_word = target_addr->load(fence);
-        if (!target_word.IsPMwCASDescriptor()) return target_word.GetTargetData<T>();
+
+        if constexpr (component::kIsDirtyFlagEnabled) {
+          if (!target_word.IsPMwCASDescriptor() || !target_word.IsNotPersisted()) {
+            return target_word.GetTargetData<T>();
+          }
+        } else {
+          if (!target_word.IsPMwCASDescriptor()) return target_word.GetTargetData<T>();
+        }
+
         if (i > kRetryNum) break;
         SPINLOCK_HINT
       }
