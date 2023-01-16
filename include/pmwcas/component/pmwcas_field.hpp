@@ -56,8 +56,12 @@ class PMwCASField
       T target_data,
       bool is_pmwcas_descriptor = false)
       : target_bit_arr_{ConvertToUint64(target_data)},
+#ifdef PMWCAS_USE_DIRTY_FLAG
         pmwcas_flag_{static_cast<uint64_t>(is_pmwcas_descriptor)},
         dirty_flag_{0}
+#else
+        pmwcas_flag_{static_cast<uint64_t>(is_pmwcas_descriptor)}
+#endif
   {
     // static check to validate PMwCAS targets
     static_assert(sizeof(T) == kWordSize);  // NOLINT
@@ -187,6 +191,7 @@ class PMwCASField
    * Internal member variables
    *##################################################################################*/
 
+#ifdef PMWCAS_USE_DIRTY_FLAG
   /// An actual target data
   uint64_t target_bit_arr_ : 62;
 
@@ -195,6 +200,13 @@ class PMwCASField
 
   /// A flag for indicating this field may not be persisted.
   uint64_t dirty_flag_ : 1;
+#else
+  /// An actual target data
+  uint64_t target_bit_arr_ : 63;
+
+  /// Representing whether this field contains a PMwCAS descriptor
+  uint64_t pmwcas_flag_ : 1;
+#endif
 };
 
 // CAS target words must be one word
