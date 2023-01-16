@@ -99,7 +99,11 @@ class PMwCASTarget
     for (size_t i = 0; true; ++i) {
       // try to embed a PMwCAS descriptor
       addr->compare_exchange_strong(expected, desc_addr, std::memory_order_relaxed);
-      if (!expected.IsPMwCASDescriptor() || !expected.IsNotPersisted() || i >= kRetryNum) break;
+      if constexpr (kIsDirtyFlagEnabled) {
+        if (!expected.IsPMwCASDescriptor() || !expected.IsNotPersisted() || i >= kRetryNum) break;
+      } else {
+        if (!expected.IsPMwCASDescriptor() || i >= kRetryNum) break;
+      }
 
       // retry if another descriptor is embedded
       expected = old_val_;
@@ -128,10 +132,14 @@ class PMwCASTarget
   RedoPMwCAS()
   {
     auto *addr = static_cast<std::atomic<PMwCASField> *>(pmemobj_direct(oid_));
-    auto dirty_val = new_val_;
-    dirty_val.SetDirtyFlag(true);
-    addr->store(dirty_val, std::memory_order_relaxed);
-    pmem_persist(addr, kWordSize);
+
+    if constexpr (kIsDirtyFlagEnabled) {
+      auto dirty_val = new_val_;
+      dirty_val.SetDirtyFlag(true);
+      addr->store(dirty_val, std::memory_order_relaxed);
+      pmem_persist(addr, kWordSize);
+    }
+
     addr->store(new_val_, fence_);
     pmem_persist(addr, kWordSize);
   }
@@ -144,10 +152,14 @@ class PMwCASTarget
   UndoPMwCAS()
   {
     auto *addr = static_cast<std::atomic<PMwCASField> *>(pmemobj_direct(oid_));
-    auto dirty_val = old_val_;
-    dirty_val.SetDirtyFlag(true);
-    addr->store(dirty_val, std::memory_order_relaxed);
-    pmem_persist(addr, kWordSize);
+
+    if constexpr (kIsDirtyFlagEnabled) {
+      auto dirty_val = old_val_;
+      dirty_val.SetDirtyFlag(true);
+      addr->store(dirty_val, std::memory_order_relaxed);
+      pmem_persist(addr, kWordSize);
+    }
+
     addr->store(old_val_, std::memory_order_relaxed);
     pmem_persist(addr, kWordSize);
   }
@@ -165,12 +177,15 @@ class PMwCASTarget
     const auto desired = (succeeded) ? new_val_ : old_val_;
     addr->compare_exchange_strong(desc_addr, desired, std::memory_order_relaxed);
 
-    // if CAS failed, `desc_addr` has the current value
-    if (desc_addr.IsNotPersisted()) {
-      auto val = desc_addr;
-      val.SetDirtyFlag(false);
-      addr->store(val, std::memory_order_relaxed);
+    if constexpr (kIsDirtyFlagEnabled) {
+      // if CAS failed, `desc_addr` has the current value
+      if (desc_addr.IsNotPersisted()) {
+        auto val = desc_addr;
+        val.SetDirtyFlag(false);
+        addr->store(val, std::memory_order_relaxed);
+      }
     }
+
     pmem_flush(addr, kWordSize);
   }
 
