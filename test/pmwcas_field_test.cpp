@@ -91,21 +91,32 @@ class PMwCASFieldFixture : public ::testing::Test
     PMwCASField field_b{data_1_, false};
     EXPECT_TRUE(field_a == field_b);
 
-    field_b = PMwCASField{data_2_, false};
-    EXPECT_FALSE(field_a == field_b);
+    if constexpr (kIsDirtyFlagEnabled) {
+      field_b = PMwCASField{data_2_, false};
+      EXPECT_FALSE(field_a == field_b);
 
-    field_a = field_b;
-    field_a.SetDirtyFlag(true);
-    EXPECT_FALSE(field_a == field_b);
+      field_a = field_b;
+      field_a.SetDirtyFlag(true);
+      EXPECT_FALSE(field_a == field_b);
 
-    field_b = PMwCASField{data_2_, true};
-    EXPECT_FALSE(field_a == field_b);
+      field_b = PMwCASField{data_2_, true};
+      EXPECT_FALSE(field_a == field_b);
 
-    field_a.SetDirtyFlag(false);
-    EXPECT_FALSE(field_a == field_b);
+      field_a.SetDirtyFlag(false);
+      EXPECT_FALSE(field_a == field_b);
 
-    field_b = PMwCASField{data_2_, false};
-    EXPECT_TRUE(field_a == field_b);
+      field_b = PMwCASField{data_2_, false};
+      EXPECT_TRUE(field_a == field_b);
+    } else {
+      field_b = PMwCASField{data_2_, false};
+      EXPECT_FALSE(field_a == field_b);
+
+      field_a = PMwCASField{data_2_, true};
+      EXPECT_FALSE(field_a == field_b);
+
+      field_b = PMwCASField{data_2_, true};
+      EXPECT_TRUE(field_a == field_b);
+    }
   }
 
   void
@@ -115,21 +126,32 @@ class PMwCASFieldFixture : public ::testing::Test
     PMwCASField field_b{data_1_, false};
     EXPECT_FALSE(field_a != field_b);
 
-    field_b = PMwCASField{data_2_, false};
-    EXPECT_TRUE(field_a != field_b);
+    if constexpr (kIsDirtyFlagEnabled) {
+      field_b = PMwCASField{data_2_, false};
+      EXPECT_TRUE(field_a != field_b);
 
-    field_a = field_b;
-    field_a.SetDirtyFlag(true);
-    EXPECT_TRUE(field_a != field_b);
+      field_a = field_b;
+      field_a.SetDirtyFlag(true);
+      EXPECT_TRUE(field_a != field_b);
 
-    field_b = PMwCASField{data_2_, true};
-    EXPECT_TRUE(field_a != field_b);
+      field_b = PMwCASField{data_2_, true};
+      EXPECT_TRUE(field_a != field_b);
 
-    field_a.SetDirtyFlag(false);
-    EXPECT_TRUE(field_a != field_b);
+      field_a.SetDirtyFlag(false);
+      EXPECT_TRUE(field_a != field_b);
 
-    field_b = PMwCASField{data_2_, false};
-    EXPECT_FALSE(field_a != field_b);
+      field_b = PMwCASField{data_2_, false};
+      EXPECT_FALSE(field_a != field_b);
+    } else {
+      field_b = PMwCASField{data_2_, false};
+      EXPECT_TRUE(field_a != field_b);
+
+      field_a = PMwCASField{data_2_, true};
+      EXPECT_TRUE(field_a != field_b);
+
+      field_b = PMwCASField{data_2_, true};
+      EXPECT_FALSE(field_a != field_b);
+    }
   }
 
  private:

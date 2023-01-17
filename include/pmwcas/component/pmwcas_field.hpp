@@ -33,19 +33,20 @@ namespace dbgroup::atomic::pmwcas::component
 class PMwCASField
 {
  public:
-/*####################################################################################
- * Public constructors and assignment operators
- *##################################################################################*/
+  /*####################################################################################
+   * Public constructors and assignment operators
+   *##################################################################################*/
 
-/**
- * @brief Construct an empty field for PMwCAS.
- *
- */
+  /**
+   * @brief Construct an empty field for PMwCAS.
+   *
+   */
 #ifdef PMWCAS_USE_DIRTY_FLAG
   constexpr PMwCASField() : target_bit_arr_{}, pmwcas_flag_{0}, dirty_flag_{0} {}
 #else
   constexpr PMwCASField() : target_bit_arr_{}, pmwcas_flag_{0} {}
 #endif
+
   /**
    * @brief Construct a PMwCAS field with given data.
    *
@@ -121,7 +122,11 @@ class PMwCASField
   IsNotPersisted() const  //
       -> bool
   {
+#ifdef PMWCAS_USE_DIRTY_FLAG
     return dirty_flag_;
+#else
+    return false;
+#endif
   }
 
   /**
@@ -132,11 +137,11 @@ class PMwCASField
   IsPMwCASDescriptor() const  //
       -> bool
   {
-    if constexpr (kIsDirtyFlagEnabled) {
-      return pmwcas_flag_ && dirty_flag_;
-    } else {
-      return pmwcas_flag_;
-    }
+#ifdef PMWCAS_USE_DIRTY_FLAG
+    return pmwcas_flag_ && dirty_flag_;
+#else
+    return pmwcas_flag_;
+#endif
   }
 
   /**
@@ -165,7 +170,9 @@ class PMwCASField
   void
   SetDirtyFlag(bool is_dirty)
   {
+#ifdef PMWCAS_USE_DIRTY_FLAG
     dirty_flag_ = is_dirty;
+#endif
   }
 
  private:

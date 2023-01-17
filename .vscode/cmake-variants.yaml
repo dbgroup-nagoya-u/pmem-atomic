@@ -11,6 +11,7 @@ buildType:
         PMWCAS_BUILD_TESTS: ON
         DBGROUP_TEST_THREAD_NUM: 8
         DBGROUP_TEST_TMP_PMEM_PATH: /pmem_tmp
+        PMWCAS_USE_DIRTY_FLAG: OFF
     relWithDebInfo:
       short: RelWithDebInfo
       long: Perform optimizations and include debugging informatin
@@ -20,6 +21,7 @@ buildType:
         PMWCAS_BUILD_TESTS: ON
         DBGROUP_TEST_THREAD_NUM: 8
         DBGROUP_TEST_TMP_PMEM_PATH: /pmem_tmp
+        PMWCAS_USE_DIRTY_FLAG: OFF
     release:
       short: Release
       long: Perform optimizations and omit debugging informatin
@@ -29,3 +31,4 @@ buildType:
         PMWCAS_BUILD_TESTS: ON
         DBGROUP_TEST_THREAD_NUM: 8
         DBGROUP_TEST_TMP_PMEM_PATH: /pmem_tmp
+        PMWCAS_USE_DIRTY_FLAG: OFF
