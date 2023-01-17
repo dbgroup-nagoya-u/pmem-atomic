@@ -94,7 +94,6 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
   Reset()
   {
     target_count_ = 0;
-    pmem_persist(&target_count_, sizeof(size_t));
   }
 
   /*####################################################################################
@@ -108,7 +107,7 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
    *
    * @tparam T an expected class of a target field
    * @param addr a target memory address to read
-   * * @param fence a flag for controling std::memory_order.
+   * @param fence a flag for controling std::memory_order.
    * @return a read value
    */
   template <class T>
@@ -209,7 +208,7 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
 
     target_count_ = 0;
     status_ = DescStatus::kFinished;
-    pmem_persist(&target_count_, sizeof(size_t) + kStatusSize);
+    pmem_persist(&status_, kStatusSize);
 
     return succeeded;
   }

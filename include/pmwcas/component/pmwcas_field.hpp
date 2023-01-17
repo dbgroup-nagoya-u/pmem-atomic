@@ -41,7 +41,11 @@ class PMwCASField
    * @brief Construct an empty field for PMwCAS.
    *
    */
+#ifdef PMWCAS_USE_DIRTY_FLAG
   constexpr PMwCASField() : target_bit_arr_{}, pmwcas_flag_{0}, dirty_flag_{0} {}
+#else
+  constexpr PMwCASField() : target_bit_arr_{}, pmwcas_flag_{0} {}
+#endif
 
   /**
    * @brief Construct a PMwCAS field with given data.
@@ -56,8 +60,12 @@ class PMwCASField
       T target_data,
       bool is_pmwcas_descriptor = false)
       : target_bit_arr_{ConvertToUint64(target_data)},
+#ifdef PMWCAS_USE_DIRTY_FLAG
         pmwcas_flag_{static_cast<uint64_t>(is_pmwcas_descriptor)},
         dirty_flag_{0}
+#else
+        pmwcas_flag_{static_cast<uint64_t>(is_pmwcas_descriptor)}
+#endif
   {
     // static check to validate PMwCAS targets
     static_assert(sizeof(T) == kWordSize);  // NOLINT
@@ -114,7 +122,11 @@ class PMwCASField
   IsNotPersisted() const  //
       -> bool
   {
+#ifdef PMWCAS_USE_DIRTY_FLAG
     return dirty_flag_;
+#else
+    return false;
+#endif
   }
 
   /**
@@ -125,7 +137,11 @@ class PMwCASField
   IsPMwCASDescriptor() const  //
       -> bool
   {
+#ifdef PMWCAS_USE_DIRTY_FLAG
+    return pmwcas_flag_ && dirty_flag_;
+#else
     return pmwcas_flag_;
+#endif
   }
 
   /**
@@ -154,7 +170,9 @@ class PMwCASField
   void
   SetDirtyFlag(bool is_dirty)
   {
+#ifdef PMWCAS_USE_DIRTY_FLAG
     dirty_flag_ = is_dirty;
+#endif
   }
 
  private:
@@ -187,6 +205,7 @@ class PMwCASField
    * Internal member variables
    *##################################################################################*/
 
+#ifdef PMWCAS_USE_DIRTY_FLAG
   /// An actual target data
   uint64_t target_bit_arr_ : 62;
 
@@ -195,6 +214,13 @@ class PMwCASField
 
   /// A flag for indicating this field may not be persisted.
   uint64_t dirty_flag_ : 1;
+#else
+  /// An actual target data
+  uint64_t target_bit_arr_ : 63;
+
+  /// Representing whether this field contains a PMwCAS descriptor
+  uint64_t pmwcas_flag_ : 1;
+#endif
 };
 
 // CAS target words must be one word

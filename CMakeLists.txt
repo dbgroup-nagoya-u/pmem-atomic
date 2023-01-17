@@ -43,6 +43,8 @@ set(PMWCAS_RETRY_THRESHOLD "10" CACHE STRING "The maximum number of retries for 
 
 set(PMWCAS_SLEEP_TIME "10" CACHE STRING "A sleep time for preventing busy loops [us].")
 
+option(PMWCAS_USE_DIRTY_FLAG "Use dirty flag to indicate words not persisted." OFF)
+
 #--------------------------------------------------------------------------------------#
 # Build targets
 #--------------------------------------------------------------------------------------#
@@ -63,6 +65,7 @@ if(NOT TARGET pmwcas::pmwcas)
     PMWCAS_DESCRIPTOR_POOL_SIZE=${PMWCAS_DESCRIPTOR_POOL_SIZE}
     PMWCAS_RETRY_THRESHOLD=${PMWCAS_RETRY_THRESHOLD}
     PMWCAS_SLEEP_TIME=${PMWCAS_SLEEP_TIME}
+    $<$<BOOL:${PMWCAS_USE_DIRTY_FLAG}>:PMWCAS_USE_DIRTY_FLAG>
     $<$<BOOL:${PMWCAS_HAS_SPINLOCK_HINT}>:PMWCAS_HAS_SPINLOCK_HINT>
   )
 

@@ -51,6 +51,12 @@ constexpr size_t kWordSize = 8;
 /// Assumes that the size of one cache line is 64 bytes
 constexpr size_t kCacheLineSize = 64;
 
+#ifdef PMWCAS_USE_DIRTY_FLAG
+constexpr bool kIsDirtyFlagEnabled = true;
+#else
+constexpr bool kIsDirtyFlagEnabled = false;
+#endif
+
 /*######################################################################################
  * Global utility structs
  *####################################################################################*/
