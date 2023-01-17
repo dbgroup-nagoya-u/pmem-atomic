@@ -94,7 +94,6 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
   Reset()
   {
     target_count_ = 0;
-    pmem_persist(&target_count_, sizeof(size_t));
   }
 
   /*####################################################################################
@@ -209,7 +208,7 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
 
     target_count_ = 0;
     status_ = DescStatus::kFinished;
-    pmem_persist(&target_count_, sizeof(size_t) + kStatusSize);
+    pmem_persist(&status_, kStatusSize);
 
     return succeeded;
   }
