@@ -33,16 +33,19 @@ namespace dbgroup::atomic::pmwcas::component
 class PMwCASField
 {
  public:
-  /*####################################################################################
-   * Public constructors and assignment operators
-   *##################################################################################*/
+/*####################################################################################
+ * Public constructors and assignment operators
+ *##################################################################################*/
 
-  /**
-   * @brief Construct an empty field for PMwCAS.
-   *
-   */
+/**
+ * @brief Construct an empty field for PMwCAS.
+ *
+ */
+#ifdef PMWCAS_USE_DIRTY_FLAG
   constexpr PMwCASField() : target_bit_arr_{}, pmwcas_flag_{0}, dirty_flag_{0} {}
-
+#else
+  constexpr PMwCASField() : target_bit_arr_{}, pmwcas_flag_{0} {}
+#endif
   /**
    * @brief Construct a PMwCAS field with given data.
    *

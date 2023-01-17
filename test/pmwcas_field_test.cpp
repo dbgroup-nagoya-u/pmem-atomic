@@ -61,16 +61,25 @@ class PMwCASFieldFixture : public ::testing::Test
     EXPECT_FALSE(target_word_1.IsNotPersisted());
 
     if (is_pmwcas_desc) {
-      EXPECT_TRUE(target_word_1.IsPMwCASDescriptor());
+      if constexpr (kIsDirtyFlagEnabled) {
+        EXPECT_FALSE(target_word_1.IsPMwCASDescriptor());
+        auto dirty_word = target_word_1;
+        dirty_word.SetDirtyFlag(true);
+        EXPECT_TRUE(dirty_word.IsPMwCASDescriptor());
+      } else {
+        EXPECT_TRUE(target_word_1.IsPMwCASDescriptor());
+      }
     } else {
       EXPECT_FALSE(target_word_1.IsPMwCASDescriptor());
-      auto dirty_word = target_word_1;
-      dirty_word.SetDirtyFlag(true);
-      EXPECT_TRUE(dirty_word.IsNotPersisted());
-      auto persisted_word = dirty_word;
-      persisted_word.SetDirtyFlag(false);
-      EXPECT_FALSE(persisted_word.IsNotPersisted());
-      EXPECT_EQ(target_word_1, persisted_word);
+      if constexpr (kIsDirtyFlagEnabled) {
+        auto dirty_word = target_word_1;
+        dirty_word.SetDirtyFlag(true);
+        EXPECT_TRUE(dirty_word.IsNotPersisted());
+        auto persisted_word = dirty_word;
+        persisted_word.SetDirtyFlag(false);
+        EXPECT_FALSE(persisted_word.IsNotPersisted());
+        EXPECT_EQ(target_word_1, persisted_word);
+      }
     }
     EXPECT_EQ(data_1_, target_word_1.GetTargetData<Target>());
   }
