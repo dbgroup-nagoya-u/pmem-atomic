@@ -119,7 +119,7 @@ class PMwCASField
    * @retval false otherwise.
    */
   [[nodiscard]] constexpr auto
-  IsNotPersisted() const  //
+  IsNotPersisted() const  // NOLINT
       -> bool
   {
 #ifdef PMWCAS_USE_DIRTY_FLAG
@@ -168,7 +168,7 @@ class PMwCASField
    * @param is_dirty a flag for whether to set the dirty bit.
    */
   void
-  SetDirtyFlag(bool is_dirty)
+  SetDirtyFlag([[maybe_unused]] bool is_dirty)
   {
 #ifdef PMWCAS_USE_DIRTY_FLAG
     dirty_flag_ = is_dirty;
