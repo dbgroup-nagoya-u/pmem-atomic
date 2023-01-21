@@ -134,10 +134,12 @@ class PMwCASTarget
       dirty_val.SetDirtyFlag(true);
       addr->store(dirty_val, std::memory_order_relaxed);
       pmem_persist(addr, kWordSize);
+      addr->store(new_val_, fence_);
+      pmem_persist(addr, kWordSize);
+    } else {
+      addr->store(new_val_, fence_);
+      pmem_flush(addr, kWordSize);
     }
-
-    addr->store(new_val_, fence_);
-    pmem_persist(addr, kWordSize);
   }
 
   /**
@@ -154,10 +156,12 @@ class PMwCASTarget
       dirty_val.SetDirtyFlag(true);
       addr->store(dirty_val, std::memory_order_relaxed);
       pmem_persist(addr, kWordSize);
+      addr->store(old_val_, std::memory_order_relaxed);
+      pmem_persist(addr, kWordSize);
+    } else {
+      addr->store(old_val_, std::memory_order_relaxed);
+      pmem_flush(addr, kWordSize);
     }
-
-    addr->store(old_val_, std::memory_order_relaxed);
-    pmem_persist(addr, kWordSize);
   }
 
   /**

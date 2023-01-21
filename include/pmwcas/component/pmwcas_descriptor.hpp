@@ -173,44 +173,52 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
     // initialize and persist PMwCAS status
     status_ = DescStatus::kUndecided;
     pmem_persist(this, sizeof(PMwCASDescriptor));
-    auto succeeded = true;
 
     // serialize PMwCAS operations by embedding a descriptor
     size_t embedded_count = 0;
-
     for (size_t i = 0; i < target_count_; ++i, ++embedded_count) {
-      if (!targets_[i].EmbedDescriptor(desc_addr)) {
-        // if a target field has been already updated, PMwCAS fails
-        succeeded = false;
-        break;
-      }
-    }
-
-    if (succeeded) {
-      for (size_t i = 0; i < target_count_; ++i) {
-        targets_[i].Flush();
-      }
-      status_ = DescStatus::kSucceeded;
-      pmem_flush(&status_, kStatusSize);
-      pmem_drain();
+      if (!targets_[i].EmbedDescriptor(desc_addr)) break;
     }
 
     // complete PMwCAS
-    if (succeeded) {
-      for (size_t i = 0; i < embedded_count; ++i) {
-        targets_[i].RedoPMwCAS();
+    if (embedded_count < target_count_) {
+      // MwCAS failed, so revert changes
+      if (embedded_count > 0) {
+        size_t i = 0;
+        do {
+          targets_[i].UndoPMwCAS();
+        } while (++i < embedded_count);
+        if constexpr (!component::kIsDirtyFlagEnabled) {
+          pmem_drain();
+        }
       }
-    } else {
-      for (size_t i = 0; i < embedded_count; ++i) {
-        targets_[i].UndoPMwCAS();
-      }
+
+      // reset the descriptor
+      target_count_ = 0;
+      status_ = DescStatus::kFinished;
+      return false;
     }
 
+    // MwCAS succeeded, so persist the embedded descriptors for fault-tolerance
+    for (size_t i = 0; i < target_count_; ++i) {
+      targets_[i].Flush();
+    }
+    status_ = DescStatus::kSucceeded;
+    pmem_flush(&status_, kStatusSize);
+    pmem_drain();
+
+    // update the target address with the desired values
+    for (size_t i = 0; i < target_count_; ++i) {
+      targets_[i].RedoPMwCAS();
+    }
+    if constexpr (!component::kIsDirtyFlagEnabled) {
+      pmem_drain();
+    }
+
+    // reset the descriptor
     target_count_ = 0;
     status_ = DescStatus::kFinished;
-    pmem_persist(&status_, kStatusSize);
-
-    return succeeded;
+    return true;
   }
 
   void
