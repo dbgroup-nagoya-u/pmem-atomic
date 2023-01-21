@@ -43,6 +43,15 @@ constexpr size_t kRetryNum = PMWCAS_RETRY_THRESHOLD;
 /// A sleep time for preventing busy loops [us].
 static constexpr auto kShortSleep = std::chrono::microseconds{PMWCAS_SLEEP_TIME};
 
+/// Assumes that the length of one word is 8 bytes
+constexpr size_t kWordSize = 8;
+
+/// Assumes that the size of one cache line is 64 bytes
+constexpr size_t kCacheLineSize = 64;
+
+/// Assumes that the size of one line on persistent memory is 256 bytes
+constexpr size_t kPMEMLineSize = 256;
+
 /*######################################################################################
  * Global utility functions
  *####################################################################################*/
