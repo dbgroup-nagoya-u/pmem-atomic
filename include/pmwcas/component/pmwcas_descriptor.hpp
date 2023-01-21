@@ -36,7 +36,7 @@ namespace dbgroup::atomic::pmwcas
  * @brief A class to manage a PMwCAS (multi-words compare-and-swap) operation.
  *
  */
-class alignas(component::kCacheLineSize) PMwCASDescriptor
+class alignas(kPMEMLineSize) PMwCASDescriptor
 {
   /*####################################################################################
    * Type aliases
@@ -167,12 +167,14 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
   PMwCAS()  //
       -> bool
   {
-    const PMwCASField desc_addr{this, kDescriptorFlag};
     constexpr size_t kStatusSize = 1;
+
+    const size_t desc_size = 2 * kWordSize + sizeof(PMwCASTarget) * target_count_;
+    const PMwCASField desc_addr{this, kDescriptorFlag};
 
     // initialize and persist PMwCAS status
     status_ = DescStatus::kUndecided;
-    pmem_persist(this, sizeof(PMwCASDescriptor));
+    pmem_persist(this, desc_size);
 
     // serialize PMwCAS operations by embedding a descriptor
     size_t embedded_count = 0;
@@ -260,14 +262,14 @@ class alignas(component::kCacheLineSize) PMwCASDescriptor
    * Internal member variables
    *##################################################################################*/
 
-  /// Target entries of PMwCAS
-  PMwCASTarget targets_[kPMwCASCapacity];
+  /// PMwCAS descriptor status
+  DescStatus status_{DescStatus::kFinished};
 
   /// The number of registered PMwCAS targets
   size_t target_count_{0};
 
-  /// PMwCAS descriptor status
-  DescStatus status_{DescStatus::kFinished};
+  /// Target entries of PMwCAS
+  PMwCASTarget targets_[kPMwCASCapacity];
 };
 
 }  // namespace dbgroup::atomic::pmwcas
