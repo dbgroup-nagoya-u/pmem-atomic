@@ -95,18 +95,19 @@ class PMwCASTarget
       -> bool
   {
     auto *addr = static_cast<std::atomic<PMwCASField> *>(pmemobj_direct(oid_));
-    PMwCASField expected = old_val_;
+    PMwCASField expected{};
     for (size_t i = 0; true; ++i) {
       // try to embed a PMwCAS descriptor
-      addr->compare_exchange_strong(expected, desc_addr, std::memory_order_relaxed);
-      if (!expected.IsPMwCASDescriptor() || i >= kRetryNum) break;
+      expected = addr->load(std::memory_order_relaxed);
+      if (expected == old_val_
+          && addr->compare_exchange_strong(expected, desc_addr, std::memory_order_relaxed)) {
+        return true;
+      }
+      if (!expected.IsPMwCASDescriptor() || i >= kRetryNum) return false;
 
       // retry if another descriptor is embedded
-      expected = old_val_;
       SPINLOCK_HINT
     }
-
-    return expected == old_val_;
   }
 
   /**
