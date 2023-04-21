@@ -49,10 +49,10 @@ option(PMWCAS_USE_DIRTY_FLAG "Use dirty flag to indicate words not persisted." O
 # Build targets
 #--------------------------------------------------------------------------------------#
 
-if(NOT TARGET pmwcas::pmwcas)
-  add_library(pmwcas INTERFACE)
-  add_library(pmwcas::pmwcas ALIAS pmwcas)
-  target_compile_features(pmwcas INTERFACE
+if(NOT TARGET dbgroup::${PROJECT_NAME})
+  add_library(${PROJECT_NAME} INTERFACE)
+  add_library(dbgroup::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
+  target_compile_features(${PROJECT_NAME} INTERFACE
     "cxx_std_17"
   )
   target_include_directories(pmwcas INTERFACE
