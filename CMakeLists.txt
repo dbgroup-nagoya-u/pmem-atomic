@@ -55,12 +55,12 @@ if(NOT TARGET dbgroup::${PROJECT_NAME})
   target_compile_features(${PROJECT_NAME} INTERFACE
     "cxx_std_17"
   )
-  target_include_directories(pmwcas INTERFACE
+  target_include_directories(${PROJECT_NAME} INTERFACE
     "${PMWCAS_SOURCE_DIR}/include"
     "${LIBPMEM_INCLUDE_DIRS}"
     "${LIBPMEMOBJ++_INCLUDE_DIRS}"
   )
-  target_compile_definitions(pmwcas INTERFACE
+  target_compile_definitions(${PROJECT_NAME} INTERFACE
     PMWCAS_CAPACITY=${PMWCAS_CAPACITY}
     PMWCAS_DESCRIPTOR_POOL_SIZE=${PMWCAS_DESCRIPTOR_POOL_SIZE}
     PMWCAS_RETRY_THRESHOLD=${PMWCAS_RETRY_THRESHOLD}
@@ -68,12 +68,11 @@ if(NOT TARGET dbgroup::${PROJECT_NAME})
     $<$<BOOL:${PMWCAS_USE_DIRTY_FLAG}>:PMWCAS_USE_DIRTY_FLAG>
     $<$<BOOL:${PMWCAS_HAS_SPINLOCK_HINT}>:PMWCAS_HAS_SPINLOCK_HINT>
   )
-
-  target_link_libraries(pmwcas INTERFACE
-  Threads::Threads
-  ${LIBPMEM_LIBRARIES}
-  ${LIBPMEMOBJ++_LIBRARIES}
-)
+  target_link_libraries(${PROJECT_NAME} INTERFACE
+    Threads::Threads
+    ${LIBPMEM_LIBRARIES}
+    ${LIBPMEMOBJ++_LIBRARIES}
+  )
 endif()
 
 #--------------------------------------------------------------------------------------#
