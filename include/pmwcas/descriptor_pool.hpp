@@ -29,7 +29,6 @@
 #include <libpmemobj++/pool.hpp>
 
 // local sources
-#include "component/element_holder.hpp"
 #include "component/pmwcas_descriptor.hpp"
 
 namespace dbgroup::atomic::pmwcas
@@ -55,11 +54,6 @@ class DescriptorPool
       const std::string &layout)
   {
     constexpr auto kModeRW = S_IRUSR | S_IWUSR;  // NOLINT
-
-    // initialize reservation status
-    for (size_t i = 0; i < kDescriptorPoolSize; ++i) {
-      reserve_arr_[i].store(false);
-    }
 
     // create/open a pool on persistent memory
     try {
@@ -97,27 +91,17 @@ class DescriptorPool
   /*####################################################################################
    * Public utility functions
    *##################################################################################*/
+
+  /**
+   * @note If a thread calls this function multiple times, it will return the same
+   * descriptor.
+   * @return The PMwCAS descriptor for the current thread.
+   */
   auto
   Get()  //
       -> PMwCASDescriptor *
   {
-    thread_local std::unique_ptr<ElementHolder> ptr = nullptr;
-
-    while (!ptr) {
-      for (size_t i = 0; i < kDescriptorPoolSize; ++i) {
-        auto is_reserved = reserve_arr_[i].load(std::memory_order_relaxed);
-        if (!is_reserved) {
-          reserve_arr_[i].compare_exchange_strong(is_reserved, true, std::memory_order_relaxed);
-          if (!is_reserved) {
-            auto root = pmem_pool_.root();
-            ptr = std::make_unique<ElementHolder>(i, reserve_arr_, &(root->descriptors[i]));
-            break;
-          }
-        }
-      }
-    }
-
-    return ptr->GetHoldDescriptor();
+    return &(desc_pool_[::dbgroup::thread::IDManager::GetThreadID()]);
   }
 
   void
@@ -138,17 +122,17 @@ class DescriptorPool
 
   /// Descriptor pool array
   struct DescArray {
-    PMwCASDescriptor descriptors[kDescriptorPoolSize]{};
+    PMwCASDescriptor descriptors[kMaxThreadNum]{};
   };
 
   /*####################################################################################
    * Internal member variables
    *##################################################################################*/
 
-  PmemPool_t<DescArray> pmem_pool_;
+  /// @brief The pool of PMwCAS descriptors.
+  PMwCASDescriptor *desc_pool_ = nullptr;
 
-  /// An array representing the occupied state of the descriptor pool
-  std::shared_ptr<std::atomic_bool[]> reserve_arr_{new std::atomic_bool[kDescriptorPoolSize]};
+  PmemPool_t<DescArray> pmem_pool_;
 };
 
 }  // namespace dbgroup::atomic::pmwcas
