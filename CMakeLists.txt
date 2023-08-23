@@ -46,6 +46,13 @@ set(PMWCAS_SLEEP_TIME "10" CACHE STRING "A sleep time for preventing busy loops 
 option(PMWCAS_USE_DIRTY_FLAG "Use dirty flag to indicate words not persisted." OFF)
 
 #--------------------------------------------------------------------------------------#
+# Configure external libraries
+#--------------------------------------------------------------------------------------#
+
+# configure thread ID manager
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/external/cpp-utility")
+
+#--------------------------------------------------------------------------------------#
 # Build targets
 #--------------------------------------------------------------------------------------#
 
@@ -72,6 +79,7 @@ if(NOT TARGET dbgroup::${PROJECT_NAME})
     Threads::Threads
     ${LIBPMEM_LIBRARIES}
     ${LIBPMEMOBJ++_LIBRARIES}
+    dbgroup::cpp_utility
   )
 endif()
 
