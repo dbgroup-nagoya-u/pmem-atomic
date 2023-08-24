@@ -32,14 +32,17 @@ cd pmwcas
 
 #### Parameters for Unit Testing
 
-- `PMWCAS_BUILD_TESTS`: build unit tests if `ON` (default: `OFF`).
-- `PMWCAS_TEST_THREAD_NUM`: the number of threads to run unit tests (default: `8`).
+- `PMWCAS_BUILD_TESTS`: Build unit tests if `ON` (default: `OFF`).
+- `DBGROUP_TEST_THREAD_NUM`: The number of threads to run unit tests (default: `8`).
+- `DBGROUP_TEST_EXEC_NUM`: The number of operations performed per thread (default: `1E5`).
+- `DBGROUP_TEST_TMP_PMEM_PATH`: The path to a persistent storage (default: `""`).
+    - If the path is not set, the corresponding tests will be skipped.
 
 ### Build and Run Unit Tests
 
 ```bash
 mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release -DPMWCAS_BUILD_TESTS=ON ..
+cmake -DCMAKE_BUILD_TYPE=Release -DPMWCAS_BUILD_TESTS=ON -DDBGROUP_TEST_TMP_PMEM_PATH="/pmem_tmp" ..
 make -j
 ctest -C Release
 ```

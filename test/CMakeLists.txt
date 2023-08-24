@@ -29,7 +29,7 @@ set(
 set(
   DBGROUP_TEST_TMP_PMEM_PATH
   "" CACHE STRING
-  "The path to a durable storage."
+  "The path to a persistent storage."
 )
 
 #--------------------------------------------------------------------------------------#

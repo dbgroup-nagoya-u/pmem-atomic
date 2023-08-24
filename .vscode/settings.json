@@ -54,6 +54,7 @@
     "cout",
     "ctest",
     "DCMAKE",
+    "DDBGROUP",
     "DMWCAS",
     "DPMWCAS",
     "endl",

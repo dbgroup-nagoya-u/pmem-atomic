@@ -22,10 +22,9 @@ find_package(Threads)
 # load the module to use pkg-config
 find_package(PkgConfig)
 
-# search library with pkg-config and name its results "LIBPMEM" and "LIBPMEMOBJ++"
+# search library with pkg-config and name its results "LIBPMEM" and "LIBPMEMOBJ"
 pkg_check_modules(LIBPMEM REQUIRED libpmem)
-pkg_check_modules(LIBPMEMOBJ++ REQUIRED libpmemobj++)
-
+pkg_check_modules(LIBPMEMOBJ REQUIRED libpmemobj)
 
 # check SSE support for spinlock hints
 include(CheckIncludeFileCXX)
@@ -72,7 +71,7 @@ if(NOT TARGET dbgroup::${PROJECT_NAME})
   target_link_libraries(${PROJECT_NAME} INTERFACE
     Threads::Threads
     ${LIBPMEM_LIBRARIES}
-    ${LIBPMEMOBJ++_LIBRARIES}
+    ${LIBPMEMOBJ_LIBRARIES}
     dbgroup::cpp_utility
   )
 endif()
