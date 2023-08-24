@@ -21,7 +21,7 @@ jobs:
     - name: Create Build Environment
       shell: bash
       run: |
-        sudo apt-get install -y libpmemobj-cpp-dev
+        sudo apt-get install -y libpmemobj-dev
         cmake -E make_directory ${{github.workspace}}/build
 
     - name: Configure CMake

@@ -20,12 +20,6 @@
 // C++ standard libraries
 #include <filesystem>
 
-// external system libraries
-#include <libpmemobj++/p.hpp>
-#include <libpmemobj++/persistent_ptr.hpp>
-#include <libpmemobj++/pool.hpp>
-#include <libpmemobj++/transaction.hpp>
-
 // external libraries
 #include "gtest/gtest.h"
 
@@ -48,20 +42,16 @@ class PMwCASTargetFixture : public ::testing::Test
 {
  protected:
   /*####################################################################################
-   * Internal classes
-   *##################################################################################*/
-
-  struct PMEMRoot {
-    ::pmem::obj::p<Target> target{};
-  };
-
-  /*####################################################################################
    * Setup/Teardown
    *##################################################################################*/
 
   void
   SetUp() override
   {
+    if (kTmpPMEMPath.empty()) {
+      GTEST_SKIP_("The persistent memory path is not set.");
+    }
+
     if constexpr (std::is_same_v<Target, uint64_t *>) {
       old_val_ = new uint64_t{1};
       new_val_ = new uint64_t{2};
@@ -70,31 +60,28 @@ class PMwCASTargetFixture : public ::testing::Test
       new_val_ = 2;
     }
 
-    try {
-      // create a user directory for testing
-      const std::string user_name{std::getenv("USER")};
-      std::filesystem::path pool_path{kTmpPMEMPath};
-      pool_path /= user_name;
-      std::filesystem::create_directories(pool_path);
-      pool_path /= kPoolName;
-      std::filesystem::remove(pool_path);
+    // create a user directory for testing
+    const std::string user_name{std::getenv("USER")};
+    std::filesystem::path pool_path{kTmpPMEMPath};
+    pool_path /= user_name;
+    std::filesystem::create_directories(pool_path);
+    pool_path /= kPoolName;
+    std::filesystem::remove(pool_path);
 
-      // create a persistent pool for testing
-      constexpr size_t kSize = PMEMOBJ_MIN_POOL * 2;
-      pool_ = ::pmem::obj::pool<PMEMRoot>::create(pool_path, kLayout, kSize, kModeRW);
-
-      // allocate regions on persistent memory
-      ::pmem::obj::transaction::run(pool_, [&] {
-        auto &&root = pool_.root();
-        root->target = old_val_;
-      });
-    } catch (const std::exception &e) {
-      std::cerr << e.what() << std::endl;
-      std::terminate();
+    // create a persistent pool for testing
+    constexpr size_t kPoolSize = PMEMOBJ_MIN_POOL;
+    pop_ = pmemobj_create(pool_path.c_str(), kLayout, kPoolSize, kModeRW);
+    if (pmemobj_zalloc(pop_, &oid_, sizeof(Target), 0) != 0) {
+      std::cerr << pmemobj_errormsg() << std::endl;
+      throw std::exception{};
     }
 
-    auto *addr = &(pool_.root()->target);
-    pmwcas_target_ = PMwCASTarget{addr, old_val_, new_val_, std::memory_order_relaxed};
+    // prepare initial state
+    target_ = reinterpret_cast<Target *>(pmemobj_direct(oid_));
+    *target_ = old_val_;
+    pmemobj_persist(pop_, target_, sizeof(Target));
+
+    pmwcas_target_ = PMwCASTarget{target_, old_val_, new_val_, std::memory_order_relaxed};
     desc_ = PMwCASField{0UL, true};
   }
 
@@ -106,7 +93,13 @@ class PMwCASTargetFixture : public ::testing::Test
       delete new_val_;
     }
 
-    pool_.close();
+    if (!OID_IS_NULL(oid_)) {
+      pmemobj_free(&oid_);
+    }
+
+    if (pop_ != nullptr) {
+      pmemobj_close(pop_);
+    }
   }
 
   /*####################################################################################
@@ -116,9 +109,8 @@ class PMwCASTargetFixture : public ::testing::Test
   void
   VerifyEmbedDescriptor(const bool expect_fail)
   {
-    auto &target = pool_.root()->target.get_rw();
     if (expect_fail) {
-      target = new_val_;
+      *target_ = new_val_;
     }
 
     const bool result = pmwcas_target_.EmbedDescriptor(desc_);
@@ -126,11 +118,11 @@ class PMwCASTargetFixture : public ::testing::Test
     if (expect_fail) {
       EXPECT_FALSE(result);
       EXPECT_NE(CASTargetConverter<PMwCASField>{desc_}.converted_data,  // NOLINT
-                CASTargetConverter<Target>{target}.converted_data);     // NOLINT
+                CASTargetConverter<Target>{*target_}.converted_data);   // NOLINT
     } else {
       EXPECT_TRUE(result);
       EXPECT_EQ(CASTargetConverter<PMwCASField>{desc_}.converted_data,  // NOLINT
-                CASTargetConverter<Target>{target}.converted_data);     // NOLINT
+                CASTargetConverter<Target>{*target_}.converted_data);   // NOLINT
     }
   }
 
@@ -139,13 +131,12 @@ class PMwCASTargetFixture : public ::testing::Test
   {
     ASSERT_TRUE(pmwcas_target_.EmbedDescriptor(desc_));
 
-    auto &target = pool_.root()->target.get_rw();
     if (succeeded) {
       pmwcas_target_.Redo();
-      EXPECT_EQ(new_val_, target);
+      EXPECT_EQ(new_val_, *target_);
     } else {
       pmwcas_target_.Undo();
-      EXPECT_EQ(old_val_, target);
+      EXPECT_EQ(old_val_, *target_);
     }
   }
 
@@ -154,13 +145,12 @@ class PMwCASTargetFixture : public ::testing::Test
   {
     ASSERT_TRUE(pmwcas_target_.EmbedDescriptor(desc_));
 
-    auto &target = pool_.root()->target.get_rw();
     pmwcas_target_.Recover(succeeded, desc_);
 
     if (succeeded) {
-      EXPECT_EQ(new_val_, target);
+      EXPECT_EQ(new_val_, *target_);
     } else {
-      EXPECT_EQ(old_val_, target);
+      EXPECT_EQ(old_val_, *target_);
     }
   }
 
@@ -169,7 +159,9 @@ class PMwCASTargetFixture : public ::testing::Test
    * Internal member variables
    *##################################################################################*/
 
-  ::pmem::obj::pool<PMEMRoot> pool_{};
+  PMEMobjpool *pop_{nullptr};
+  PMEMoid oid_{OID_NULL};
+  Target *target_{nullptr};
 
   PMwCASTarget pmwcas_target_{};
   PMwCASField desc_{};

@@ -13,7 +13,7 @@ This repository is an open source implementation of a persistent multi-word comp
 ### Prerequisites
 
 ```bash
-sudo apt update && sudo apt install -y build-essential cmake
+sudo apt update && sudo apt install -y build-essential cmake libpmemobj-dev
 cd <your_workspace_dir>
 git clone https://github.com/dbgroup-nagoya-u/pmwcas.git
 cd pmwcas
@@ -155,6 +155,11 @@ main(  //
   // check whether PMwCAS operations are performed consistently
   std::cout << "1st field: " << ::dbgroup::atomic::pmwcas::Read<Target>(word_1) << std::endl  //
             << "2nd field: " << ::dbgroup::atomic::pmwcas::Read<Target>(word_2) << std::endl;
+
+  // close the pool
+  pmemobj_free(&pword_1);
+  pmemobj_free(&pword_2);
+  pmemobj_close(pop);
 
   return 0;
 }

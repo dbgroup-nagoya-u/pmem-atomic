@@ -28,7 +28,7 @@ set(
 
 set(
   DBGROUP_TEST_TMP_PMEM_PATH
-  "/tmp" CACHE STRING
+  "" CACHE STRING
   "The path to a durable storage."
 )
 
@@ -52,7 +52,7 @@ function(ADD_PMWCAS_TEST PMWCAS_TEST_TARGET)
     $<$<STREQUAL:${CMAKE_BUILD_TYPE},"Debug">:"-g3 -O0 -pg">
   )
   target_link_libraries(${PMWCAS_TEST_TARGET} PRIVATE
-    pmwcas
+    dbgroup::pmwcas
     GTest::gtest_main
   )
   target_compile_definitions(${PMWCAS_TEST_TARGET} PRIVATE

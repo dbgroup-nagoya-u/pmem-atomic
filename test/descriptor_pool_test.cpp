@@ -52,6 +52,10 @@ class DescriptorPoolFixture : public ::testing::Test
   void
   SetUp() override
   {
+    if (kTmpPMEMPath.empty()) {
+      GTEST_SKIP_("The persistent memory path is not set.");
+    }
+
     try {
       const std::string user_name{std::getenv("USER")};
       std::filesystem::path pool_path{kTmpPMEMPath};

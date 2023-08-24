@@ -62,6 +62,10 @@ class PMwCASDescriptorFixture : public ::testing::Test
   void
   SetUp() override
   {
+    if (kTmpPMEMPath.empty()) {
+      GTEST_SKIP_("The persistent memory path is not set.");
+    }
+
     constexpr size_t kPoolSize = PMEMOBJ_MIN_POOL;
     constexpr size_t kArraySize = kWordSize * kTargetFieldNum;
 
