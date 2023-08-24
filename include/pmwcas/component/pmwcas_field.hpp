@@ -27,7 +27,7 @@
 namespace dbgroup::atomic::pmwcas::component
 {
 /**
- * @brief A class to represent a PMwCAS target field.
+ * @brief A class that represents a PMwCAS target field.
  *
  */
 class PMwCASField
@@ -50,10 +50,10 @@ class PMwCASField
   /**
    * @brief Construct a PMwCAS field with given data.
    *
-   * @tparam T a target class to be embedded.
-   * @param target_data target data to be embedded.
-   * @param is_pmwcas_descriptor a flag to indicate this field contains a descriptor.
-   * @param is_not_persisted a flag to indicate this field is not persisted.
+   * @tparam T A target class to be embedded.
+   * @param target_data Target data to be embedded.
+   * @param is_pmwcas_descriptor A flag to indicate this field contains a descriptor.
+   * @param is_not_persisted A flag to indicate this field is not persisted.
    */
   template <class T>
   explicit constexpr PMwCASField(  //
@@ -146,7 +146,7 @@ class PMwCASField
 
   /**
    * @tparam T an expected class of data.
-   * @return data retained in this field.
+   * @return Data stored in this field.
    */
   template <class T>
   [[nodiscard]] constexpr auto
@@ -165,7 +165,7 @@ class PMwCASField
   /**
    * @brief Set or remove the dirty flag.
    *
-   * @param is_dirty a flag for whether to set the dirty bit.
+   * @param is_dirty A flag for whether to set the dirty bit.
    */
   void
   SetDirtyFlag([[maybe_unused]] bool is_dirty)
@@ -183,9 +183,9 @@ class PMwCASField
   /**
    * @brief Conver given data into uint64_t.
    *
-   * @tparam T a class of given data.
-   * @param data data to be converted.
-   * @return data converted to uint64_t.
+   * @tparam T A class of given data.
+   * @param data Data to be converted.
+   * @return Data converted to uint64_t.
    */
   template <class T>
   constexpr auto
@@ -206,19 +206,19 @@ class PMwCASField
    *##################################################################################*/
 
 #ifdef PMWCAS_USE_DIRTY_FLAG
-  /// An actual target data
+  /// @brief An actual target data.
   uint64_t target_bit_arr_ : 62;
 
-  /// Representing whether this field contains a PMwCAS descriptor
+  /// @brief Representing whether this field contains a PMwCAS descriptor.
   uint64_t pmwcas_flag_ : 1;
 
-  /// A flag for indicating this field may not be persisted.
+  /// @brief A flag for indicating this field may not be persisted.
   uint64_t dirty_flag_ : 1;
 #else
-  /// An actual target data
+  /// @brief An actual target data.
   uint64_t target_bit_arr_ : 63;
 
-  /// Representing whether this field contains a PMwCAS descriptor
+  /// @brief Representing whether this field contains a PMwCAS descriptor.
   uint64_t pmwcas_flag_ : 1;
 #endif
 };

@@ -39,6 +39,10 @@ namespace dbgroup::atomic::pmwcas::component
  * Global enum and constants
  *####################################################################################*/
 
+/**
+ * @brief The progress states of PMwCAS operations.
+ *
+ */
 enum DescStatus {
   kFinished = 0,
   kUndecided,

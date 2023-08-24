@@ -77,7 +77,7 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
    *##################################################################################*/
 
   /**
-   * @return the number of registered PMwCAS targets
+   * @return The number of targets added to PMwCAS.
    */
   [[nodiscard]] constexpr auto
   Size() const  //
@@ -102,13 +102,13 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
 
   /**
    * @brief Read a value from a given memory address.
-   * \e NOTE: if a memory address is included in PMwCAS target fields, it must be read
-   * via this function.
    *
-   * @tparam T an expected class of a target field
-   * @param addr a target memory address to read
-   * @param fence a flag for controling std::memory_order.
-   * @return a read value
+   * @tparam T An expected class of a target field.
+   * @param addr A target memory address to read.
+   * @param fence A flag for controling std::memory_order.
+   * @return A read value.
+   * @note If a memory address is included in PMwCAS target fields, it must be read
+   * using this function.
    */
   template <class T>
   static auto
@@ -136,13 +136,11 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
   /**
    * @brief Add a new PMwCAS target to this descriptor.
    *
-   * @tparam T a class of a target
-   * @param addr a target memory address
-   * @param old_val an expected value of a target field
-   * @param new_val an inserting value into a target field
-   * @param fence a flag for controling std::memory_order.
-   * @retval true if target registration succeeds
-   * @retval false if this descriptor is already full
+   * @tparam T A class of a target.
+   * @param addr A target memory address.
+   * @param old_val An expected value of a target field.
+   * @param new_val An inserting value into a target field.
+   * @param fence A flag for controling std::memory_order.
    */
   template <class T>
   constexpr void
@@ -160,8 +158,8 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
   /**
    * @brief Perform a PMwCAS operation by using registered targets.
    *
-   * @retval true if a PMwCAS operation succeeds
-   * @retval false if a PMwCAS operation fails
+   * @retval true if a PMwCAS operation succeeds.
+   * @retval false if a PMwCAS operation fails.
    */
   auto
   PMwCAS()  //
@@ -186,7 +184,7 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
       if (embedded_count > 0) {
         size_t i = 0;
         do {
-          targets_[i].UndoPMwCAS();
+          targets_[i].Undo();
         } while (++i < embedded_count);
         if constexpr (!kUseDirtyFlag) {
           pmem_drain();
@@ -208,7 +206,7 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
 
     // update the target address with the desired values
     for (size_t i = 0; i < target_count_; ++i) {
-      targets_[i].RedoPMwCAS();
+      targets_[i].Redo();
     }
     if constexpr (!kUseDirtyFlag) {
       pmem_drain();
@@ -219,6 +217,10 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
     return true;
   }
 
+  /**
+   * @brief Perform the incomplete PMwCAS operation, if any.
+   *
+   */
   void
   Recover()
   {
@@ -253,13 +255,13 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
    * Internal member variables
    *##################################################################################*/
 
-  /// PMwCAS descriptor status
+  /// @brief The current state of a PMwCAS operation.
   DescStatus status_{DescStatus::kFinished};
 
-  /// The number of registered PMwCAS targets
+  /// @brief The number of targets added to PMwCAS.
   size_t target_count_{0};
 
-  /// Target entries of PMwCAS
+  /// @brief Target instances of PMwCAS.
   PMwCASTarget targets_[kPMwCASCapacity];
 };
 

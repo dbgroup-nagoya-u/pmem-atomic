@@ -32,7 +32,10 @@
 
 namespace dbgroup::atomic::pmwcas
 {
-
+/**
+ * @brief A class representing the pool of descriptors.
+ *
+ */
 class DescriptorPool
 {
   /*################################################################################################
@@ -49,8 +52,8 @@ class DescriptorPool
   /**
    * @brief Construct a new DescriptorPool object.
    *
-   * @param pmem_path the path to a pmemobj pool for PMwCAS.
-   * @param layout_name the layout name to distinguish application.
+   * @param pmem_path The path to a pmemobj pool for PMwCAS.
+   * @param layout_name The layout name to distinguish application.
    */
   explicit DescriptorPool(  //
       const std::string &pmem_path,

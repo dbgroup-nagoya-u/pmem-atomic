@@ -141,10 +141,10 @@ class PMwCASTargetFixture : public ::testing::Test
 
     auto &target = pool_.root()->target.get_rw();
     if (succeeded) {
-      pmwcas_target_.RedoPMwCAS();
+      pmwcas_target_.Redo();
       EXPECT_EQ(new_val_, target);
     } else {
-      pmwcas_target_.UndoPMwCAS();
+      pmwcas_target_.Undo();
       EXPECT_EQ(old_val_, target);
     }
   }
