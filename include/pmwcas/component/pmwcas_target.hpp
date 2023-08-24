@@ -49,10 +49,10 @@ class PMwCASTarget
   /**
    * @brief Construct a new PMwCAS target based on given information.
    *
-   * @tparam T a class of PMwCAS targets.
-   * @param addr a target memory address.
-   * @param old_val an expected value of the target address.
-   * @param new_val an desired value of the target address.
+   * @tparam T A class of PMwCAS targets.
+   * @param addr A target memory address.
+   * @param old_val An expected value of the target address.
+   * @param new_val An desired value of the target address.
    */
   template <class T>
   constexpr PMwCASTarget(  //
@@ -86,7 +86,7 @@ class PMwCASTarget
   /**
    * @brief Embed a descriptor into this target address to linearlize PMwCAS operations.
    *
-   * @param desc_addr a memory address of a target descriptor.
+   * @param desc_addr A memory address of a target descriptor.
    * @retval true if the descriptor address is successfully embedded.
    * @retval false otherwise.
    */
@@ -126,11 +126,11 @@ class PMwCASTarget
    *
    */
   void
-  RedoPMwCAS()
+  Redo()
   {
     auto *addr = static_cast<std::atomic<PMwCASField> *>(pmemobj_direct(oid_));
 
-    if constexpr (kIsDirtyFlagEnabled) {
+    if constexpr (kUseDirtyFlag) {
       auto dirty_val = new_val_;
       dirty_val.SetDirtyFlag(true);
       addr->store(dirty_val, std::memory_order_relaxed);
@@ -148,11 +148,11 @@ class PMwCASTarget
    *
    */
   void
-  UndoPMwCAS()
+  Undo()
   {
     auto *addr = static_cast<std::atomic<PMwCASField> *>(pmemobj_direct(oid_));
 
-    if constexpr (kIsDirtyFlagEnabled) {
+    if constexpr (kUseDirtyFlag) {
       auto dirty_val = old_val_;
       dirty_val.SetDirtyFlag(true);
       addr->store(dirty_val, std::memory_order_relaxed);
@@ -178,7 +178,7 @@ class PMwCASTarget
     const auto desired = (succeeded) ? new_val_ : old_val_;
     addr->compare_exchange_strong(desc_addr, desired, std::memory_order_relaxed);
 
-    if constexpr (kIsDirtyFlagEnabled) {
+    if constexpr (kUseDirtyFlag) {
       // if CAS failed, `desc_addr` has the current value
       if (desc_addr.IsNotPersisted()) {
         auto val = desc_addr;
@@ -195,16 +195,16 @@ class PMwCASTarget
    * Internal member variables
    *##################################################################################*/
 
-  /// A target memory address
+  /// @brief A target memory address.
   PMEMoid oid_{};
 
-  /// An expected value of a target field
+  /// @brief An expected value of a target field.
   PMwCASField old_val_{};
 
-  /// An inserting value into a target field
+  /// @brief An inserting value into a target field.
   PMwCASField new_val_{};
 
-  /// A fence to be inserted when embedding a new value.
+  /// @brief A fence to be inserted when embedding a new value.
   std::memory_order fence_{std::memory_order_seq_cst};
 };
 

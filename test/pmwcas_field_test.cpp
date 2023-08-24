@@ -61,7 +61,7 @@ class PMwCASFieldFixture : public ::testing::Test
     EXPECT_FALSE(target_word_1.IsNotPersisted());
 
     if (is_pmwcas_desc) {
-      if constexpr (kIsDirtyFlagEnabled) {
+      if constexpr (kUseDirtyFlag) {
         EXPECT_FALSE(target_word_1.IsPMwCASDescriptor());
         auto dirty_word = target_word_1;
         dirty_word.SetDirtyFlag(true);
@@ -71,7 +71,7 @@ class PMwCASFieldFixture : public ::testing::Test
       }
     } else {
       EXPECT_FALSE(target_word_1.IsPMwCASDescriptor());
-      if constexpr (kIsDirtyFlagEnabled) {
+      if constexpr (kUseDirtyFlag) {
         auto dirty_word = target_word_1;
         dirty_word.SetDirtyFlag(true);
         EXPECT_TRUE(dirty_word.IsNotPersisted());
@@ -91,7 +91,7 @@ class PMwCASFieldFixture : public ::testing::Test
     PMwCASField field_b{data_1_, false};
     EXPECT_TRUE(field_a == field_b);
 
-    if constexpr (kIsDirtyFlagEnabled) {
+    if constexpr (kUseDirtyFlag) {
       field_b = PMwCASField{data_2_, false};
       EXPECT_FALSE(field_a == field_b);
 
@@ -126,7 +126,7 @@ class PMwCASFieldFixture : public ::testing::Test
     PMwCASField field_b{data_1_, false};
     EXPECT_FALSE(field_a != field_b);
 
-    if constexpr (kIsDirtyFlagEnabled) {
+    if constexpr (kUseDirtyFlag) {
       field_b = PMwCASField{data_2_, false};
       EXPECT_TRUE(field_a != field_b);
 

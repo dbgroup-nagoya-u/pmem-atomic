@@ -21,9 +21,15 @@ set(
 )
 
 set(
+  DBGROUP_TEST_EXEC_NUM
+  "1E5" CACHE STRING
+  "The number of operations performed per thread."
+)
+
+set(
   DBGROUP_TEST_TMP_PMEM_PATH
-  "/tmp" CACHE STRING
-  "The path to a durable storage."
+  "" CACHE STRING
+  "The path to a persistent storage."
 )
 
 #--------------------------------------------------------------------------------------#
@@ -46,11 +52,12 @@ function(ADD_PMWCAS_TEST PMWCAS_TEST_TARGET)
     $<$<STREQUAL:${CMAKE_BUILD_TYPE},"Debug">:"-g3 -O0 -pg">
   )
   target_link_libraries(${PMWCAS_TEST_TARGET} PRIVATE
-    pmwcas
+    dbgroup::pmwcas
     GTest::gtest_main
   )
   target_compile_definitions(${PMWCAS_TEST_TARGET} PRIVATE
     DBGROUP_TEST_THREAD_NUM=${DBGROUP_TEST_THREAD_NUM}
+    DBGROUP_TEST_EXEC_NUM=${DBGROUP_TEST_EXEC_NUM}
     DBGROUP_TEST_TMP_PMEM_PATH=${DBGROUP_TEST_TMP_PMEM_PATH}
   )
 

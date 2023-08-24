@@ -25,31 +25,42 @@
 #include <string>
 #include <type_traits>
 
+// external sources
+#include "thread/id_manager.hpp"
+
 namespace dbgroup::atomic::pmwcas
 {
 /*######################################################################################
  * Global enum and constants
  *####################################################################################*/
 
-/// The maximum number of target words of PMwCAS
+#ifdef PMWCAS_USE_DIRTY_FLAG
+/// @brief A flag to indicate the use of dirty flags.
+constexpr bool kUseDirtyFlag = true;
+#else
+/// @brief A flag to indicate the use of dirty flags.
+constexpr bool kUseDirtyFlag = false;
+#endif
+
+/// @brief The maximum number of target words of PMwCAS.
 constexpr size_t kPMwCASCapacity = PMWCAS_CAPACITY;
 
-/// The maximum descriptor pool size
-constexpr size_t kDescriptorPoolSize = PMWCAS_DESCRIPTOR_POOL_SIZE;
-
-/// The maximum number of retries for preventing busy loops.
+/// @brief The maximum number of retries for preventing busy loops.
 constexpr size_t kRetryNum = PMWCAS_RETRY_THRESHOLD;
 
-/// A sleep time for preventing busy loops [us].
-static constexpr auto kShortSleep = std::chrono::microseconds{PMWCAS_SLEEP_TIME};
+/// @brief A sleep time for preventing busy loops [us].
+constexpr auto kShortSleep = std::chrono::microseconds{PMWCAS_SLEEP_TIME};
 
-/// Assumes that the length of one word is 8 bytes
+/// @brief The maximum number of threads used in a process.
+constexpr size_t kMaxThreadNum = ::dbgroup::thread::kMaxThreadNum;
+
+/// @brief Assumes that the length of one word is 8 bytes
 constexpr size_t kWordSize = 8;
 
-/// Assumes that the size of one cache line is 64 bytes
+/// @brief Assumes that the size of one cache line is 64 bytes
 constexpr size_t kCacheLineSize = 64;
 
-/// Assumes that the size of one line on persistent memory is 256 bytes
+/// @brief Assumes that the size of one line on persistent memory is 256 bytes
 constexpr size_t kPMEMLineSize = 256;
 
 /*######################################################################################

@@ -33,19 +33,47 @@
 namespace dbgroup::atomic::pmwcas
 {
 /**
+ * @brief Read a value from a given memory address.
+ *
+ * @tparam T An expected class of a target field.
+ * @param addr A target memory address to read.
+ * @param fence A flag for controling std::memory_order.
+ * @return A read value.
+ * @note If a memory address is included in PMwCAS target fields, it must be read
+ * using this function.
+ */
+template <class T>
+inline auto
+Read(  //
+    const void *addr,
+    const std::memory_order fence = std::memory_order_seq_cst)  //
+    -> T
+{
+  using PMwCASField = component::PMwCASField;
+
+  const auto *target_addr = static_cast<const std::atomic<PMwCASField> *>(addr);
+  PMwCASField target_word{};
+  while (true) {
+    for (size_t i = 1; true; ++i) {
+      target_word = target_addr->load(fence);
+      if (!target_word.IsPMwCASDescriptor()) return target_word.GetTargetData<T>();
+      if (i > kRetryNum) break;
+      SPINLOCK_HINT
+    }
+
+    // wait to prevent busy loop
+    std::this_thread::sleep_for(kShortSleep);
+  }
+}
+
+namespace component
+{
+/**
  * @brief A class to manage a PMwCAS (multi-words compare-and-swap) operation.
  *
  */
 class alignas(kPMEMLineSize) PMwCASDescriptor
 {
-  /*####################################################################################
-   * Type aliases
-   *##################################################################################*/
-
-  using PMwCASTarget = component::PMwCASTarget;
-  using PMwCASField = component::PMwCASField;
-  using DescStatus = component::DescStatus;
-
  public:
   /*####################################################################################
    * Public constructors and assignment operators
@@ -77,7 +105,7 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
    *##################################################################################*/
 
   /**
-   * @return the number of registered PMwCAS targets
+   * @return The number of targets added to PMwCAS.
    */
   [[nodiscard]] constexpr auto
   Size() const  //
@@ -101,52 +129,17 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
    *##################################################################################*/
 
   /**
-   * @brief Read a value from a given memory address.
-   * \e NOTE: if a memory address is included in PMwCAS target fields, it must be read
-   * via this function.
-   *
-   * @tparam T an expected class of a target field
-   * @param addr a target memory address to read
-   * @param fence a flag for controling std::memory_order.
-   * @return a read value
-   */
-  template <class T>
-  static auto
-  Read(  //
-      const void *addr,
-      const std::memory_order fence = std::memory_order_seq_cst)  //
-      -> T
-  {
-    const auto *target_addr = static_cast<const std::atomic<PMwCASField> *>(addr);
-
-    PMwCASField target_word{};
-    while (true) {
-      for (size_t i = 1; true; ++i) {
-        target_word = target_addr->load(fence);
-        if (!target_word.IsPMwCASDescriptor()) return target_word.GetTargetData<T>();
-        if (i > kRetryNum) break;
-        SPINLOCK_HINT
-      }
-
-      // wait to prevent busy loop
-      std::this_thread::sleep_for(kShortSleep);
-    }
-  }
-
-  /**
    * @brief Add a new PMwCAS target to this descriptor.
    *
-   * @tparam T a class of a target
-   * @param addr a target memory address
-   * @param old_val an expected value of a target field
-   * @param new_val an inserting value into a target field
-   * @param fence a flag for controling std::memory_order.
-   * @retval true if target registration succeeds
-   * @retval false if this descriptor is already full
+   * @tparam T A class of a target.
+   * @param addr A target memory address.
+   * @param old_val An expected value of a target field.
+   * @param new_val An inserting value into a target field.
+   * @param fence A flag for controling std::memory_order.
    */
   template <class T>
   constexpr void
-  AddPMwCASTarget(  //
+  Add(  //
       void *addr,
       const T old_val,
       const T new_val,
@@ -160,17 +153,15 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
   /**
    * @brief Perform a PMwCAS operation by using registered targets.
    *
-   * @retval true if a PMwCAS operation succeeds
-   * @retval false if a PMwCAS operation fails
+   * @retval true if a PMwCAS operation succeeds.
+   * @retval false if a PMwCAS operation fails.
    */
   auto
   PMwCAS()  //
       -> bool
   {
-    constexpr size_t kStatusSize = 1;
-
+    const PMwCASField desc_addr{this, kIsDescriptor};
     const size_t desc_size = 2 * kWordSize + sizeof(PMwCASTarget) * target_count_;
-    const PMwCASField desc_addr{this, kDescriptorFlag};
 
     // initialize and persist PMwCAS status
     status_ = DescStatus::kUndecided;
@@ -188,16 +179,16 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
       if (embedded_count > 0) {
         size_t i = 0;
         do {
-          targets_[i].UndoPMwCAS();
+          targets_[i].Undo();
         } while (++i < embedded_count);
-        if constexpr (!component::kIsDirtyFlagEnabled) {
+        if constexpr (!kUseDirtyFlag) {
           pmem_drain();
         }
       }
 
       // reset the descriptor
-      target_count_ = 0;
       status_ = DescStatus::kFinished;
+      target_count_ = 0;
       return false;
     }
 
@@ -211,23 +202,26 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
 
     // update the target address with the desired values
     for (size_t i = 0; i < target_count_; ++i) {
-      targets_[i].RedoPMwCAS();
+      targets_[i].Redo();
     }
-    if constexpr (!component::kIsDirtyFlagEnabled) {
+    if constexpr (!kUseDirtyFlag) {
       pmem_drain();
     }
 
     // reset the descriptor
-    target_count_ = 0;
     status_ = DescStatus::kFinished;
+    target_count_ = 0;
     return true;
   }
 
+  /**
+   * @brief Perform the incomplete PMwCAS operation, if any.
+   *
+   */
   void
-  CompletePMwCAS()
+  Recover()
   {
-    const PMwCASField desc_addr{this, kDescriptorFlag};
-    constexpr size_t kStatusSize = 1;
+    const PMwCASField desc_addr{this, kIsDescriptor};
 
     // roll forward or roll back PMwCAS
     // when the status is Finished, do nothing
@@ -240,8 +234,7 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
 
     // change status and persist descriptor
     status_ = DescStatus::kFinished;
-    pmem_flush(&status_, kStatusSize);
-    pmem_drain();
+    pmem_persist(&status_, kStatusSize);
   }
 
  private:
@@ -249,29 +242,27 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
    * Internal constants
    *##################################################################################*/
 
-  /// the maximum number of retries for preventing busy loops.
-  static constexpr size_t kRetryNum = 10UL;
+  /// @brief The size of PMwCAS progress states in bytes.
+  static constexpr size_t kStatusSize = 1;
 
-  /// a sleep time for preventing busy loops.
-  static constexpr auto kShortSleep = std::chrono::microseconds{10};
-
-  /// flag for descriptor.
-  static constexpr auto kDescriptorFlag = true;
+  /// @brief A flag to indicate the PMwCAS descriptor.
+  static constexpr bool kIsDescriptor = true;
 
   /*####################################################################################
    * Internal member variables
    *##################################################################################*/
 
-  /// PMwCAS descriptor status
+  /// @brief The current state of a PMwCAS operation.
   DescStatus status_{DescStatus::kFinished};
 
-  /// The number of registered PMwCAS targets
+  /// @brief The number of targets added to PMwCAS.
   size_t target_count_{0};
 
-  /// Target entries of PMwCAS
+  /// @brief Target instances of PMwCAS.
   PMwCASTarget targets_[kPMwCASCapacity];
 };
 
+}  // namespace component
 }  // namespace dbgroup::atomic::pmwcas
 
 #endif  // PMWCAS_PMWCAS_DESCRIPTOR_HPP

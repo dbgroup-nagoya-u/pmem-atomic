@@ -39,17 +39,15 @@ namespace dbgroup::atomic::pmwcas::component
  * Global enum and constants
  *####################################################################################*/
 
+/**
+ * @brief The progress states of PMwCAS operations.
+ *
+ */
 enum DescStatus {
+  kFinished = 0,
   kUndecided,
   kSucceeded,
-  kFinished
 };
-
-#ifdef PMWCAS_USE_DIRTY_FLAG
-constexpr bool kIsDirtyFlagEnabled = true;
-#else
-constexpr bool kIsDirtyFlagEnabled = false;
-#endif
 
 /*######################################################################################
  * Global utility structs

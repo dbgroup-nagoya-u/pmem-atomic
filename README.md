@@ -1,10 +1,10 @@
-# MwCAS
+# PMwCAS
 
-[![Ubuntu-20.04](https://github.com/dbgroup-nagoya-u/mwcas/actions/workflows/unit_tests.yaml/badge.svg)](https://github.com/dbgroup-nagoya-u/mwcas/actions/workflows/unit_tests.yaml)
+[![Ubuntu-20.04](https://github.com/dbgroup-nagoya-u/pmwcas/actions/workflows/unit_tests.yaml/badge.svg)](https://github.com/dbgroup-nagoya-u/pmwcas/actions/workflows/unit_tests.yaml)
 
-This repository is an open source implementation of a multi-word compare-and-swap (MwCAS) operation for research use. This implementation is based on Harris et al.'s CASN operation[^1] with some optimizations. For more information, please refer to the following paper.
+This repository is an open source implementation of a persistent multi-word compare-and-swap (PMwCAS) operation for research use. This implementation is based on our previous work[^1] and modified to work with persistent memory. For more information, please refer to the following paper.
 
-> K. Sugiura and Y. Ishikawa, "Implementation of a Multi-Word Compare-and-Swap Operation without Garbage Collection," IEICE Transactions on Information and Systems, Vol. E105-D, No.5, pp. 946-954, May 2022. (DOI: [10.1587/transinf.2021DAP0011](https://doi.org/10.1587/transinf.2021DAP0011))
+> 
 
 ## Build
 
@@ -13,31 +13,36 @@ This repository is an open source implementation of a multi-word compare-and-swa
 ### Prerequisites
 
 ```bash
-sudo apt update && sudo apt install -y build-essential cmake
+sudo apt update && sudo apt install -y build-essential cmake libpmemobj-dev
 cd <your_workspace_dir>
-git clone https://github.com/dbgroup-nagoya-u/mwcas.git
-cd mwcas
+git clone https://github.com/dbgroup-nagoya-u/pmwcas.git
+cd pmwcas
 ```
 
 ### Build Options
 
 #### Tuning Parameters
 
-- `MWCAS_CAPACITY`: The maximum number of target words of MwCAS (default: `4`).
-    - In order to maximize performance, it is desirable to specify the minimum number needed. Otherwise, the extra space will pollute the CPU cache.
-- `MWCAS_RETRY_THRESHOLD`: The maximum number of retries for preventing busy loops. (default: `10`).
-- `MWCAS_SLEEP_TIME`: A sleep time for preventing busy loops [us]. (default: `10`).
+- `PMWCAS_USE_DIRTY_FLAG`: Use dirty flags to indicate words that are not persisted (default: `OFF`).
+    - If you do not use dirty flags, you cannot directly modify the target fields of PMwCAS operations (e.g., `std::atomic<T>::store`). If you use dirty flags, you can modify PMwCAS target fields directly, but you should be careful about the state of the flags.
+- `PMWCAS_CAPACITY`: The maximum number of target words of PMwCAS (default: `6`).
+- `PMWCAS_RETRY_THRESHOLD`: The maximum number of retries for preventing busy loops (default: `10`).
+- `PMWCAS_SLEEP_TIME`: A sleep time for preventing busy loops [us] (default: `10`).
+- `DBGROUP_MAX_THREAD_NUM`: The maximum number of worker threads (please refer to [cpp-utility](https://github.com/dbgroup-nagoya-u/cpp-utility)).
 
 #### Parameters for Unit Testing
 
-- `MWCAS_BUILD_TESTS`: build unit tests if `ON` (default: `OFF`).
-- `MWCAS_TEST_THREAD_NUM`: the number of threads to run unit tests (default: `8`).
+- `PMWCAS_BUILD_TESTS`: Build unit tests if `ON` (default: `OFF`).
+- `DBGROUP_TEST_THREAD_NUM`: The number of threads to run unit tests (default: `8`).
+- `DBGROUP_TEST_EXEC_NUM`: The number of operations performed per thread (default: `1E5`).
+- `DBGROUP_TEST_TMP_PMEM_PATH`: The path to a persistent storage (default: `""`).
+    - If the path is not set, the corresponding tests will be skipped.
 
 ### Build and Run Unit Tests
 
 ```bash
 mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release -DMWCAS_BUILD_TESTS=ON ..
+cmake -DCMAKE_BUILD_TYPE=Release -DPMWCAS_BUILD_TESTS=ON -DDBGROUP_TEST_TMP_PMEM_PATH="/pmem_tmp" ..
 make -j
 ctest -C Release
 ```
@@ -51,85 +56,113 @@ ctest -C Release
     ```bash
     cd <your_project_workspace>
     mkdir external
-    git submodule add https://github.com/dbgroup-nagoya-u/mwcas.git external/mwcas
+    git submodule add https://github.com/dbgroup-nagoya-u/pmwcas.git external/pmwcas
     ```
 
 1. Add this library to your build in `CMakeLists.txt`.
 
     ```cmake
-    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/external/mwcas")
+    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/external/pmwcas")
 
     add_executable(
       <target_bin_name>
       [<source> ...]
     )
     target_link_libraries(<target_bin_name> PRIVATE
-      mwcas::mwcas
+      dbgroup::pmwcas
     )
     ```
 
-### MwCAS APIs
+### PMwCAS APIs
 
-The following code shows the basic usage of this library. Note that you need to use a `MwCASDescriptor::Read` API to read a current value from a MwCAS target address. Otherwise, you may read an inconsistent data (e.g., an embedded MwCAS descriptor).
+The following code shows the basic usage of this library. Note that you need to use a `::dbgroup::atomic::pmwcas::Read` API to read a current value from a PMwCAS target address. Otherwise, you may read an inconsistent data (e.g., an embedded PMwCAS descriptor).
 
 ```cpp
+// C++ standard libraries
 #include <iostream>
 #include <thread>
 #include <vector>
 
-#include "mwcas/mwcas_descriptor.hpp"
+// our library
+#include "pmwcas/descriptor_pool.hpp"
 
 // use four threads for a multi-threading example
 constexpr size_t kThreadNum = 4;
 
-// the number of MwCAS operations in each thread
-constexpr size_t kExecNum = 1e6;
+// the number of PMwCAS operations performed by each thread
+constexpr size_t kExecNum = 1e5;
 
-// use an unsigned long type as MwCAS targets
+// the path to persistent memory
+constexpr char kPoolPath[] = "/pmem_tmp/main_pool";
+constexpr char kDescriptorPath[] = "/pmem_tmp/pmwcas_descriptor_pool";
+
+// do not use type check in PMDK
+constexpr uint64_t kTypeNum = 0;
+
+// use an unsigned long type as PMwCAS targets
 using Target = uint64_t;
 
-// aliases for simplicity
-using dbgroup::atomic::mwcas::MwCASDescriptor;
-
 int
-main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
+main(  //
+    [[maybe_unused]] int argc,
+    [[maybe_unused]] char **argv)
 {
-  // targets of a 2wCAS example
-  Target word_1 = 0;
-  Target word_2 = 0;
+  PMEMoid pword_1{};
+  PMEMoid pword_2{};
+
+  // prepare targets of a 2wCAS example
+  auto *pop = pmemobj_create(kPoolPath, "main_pool", PMEMOBJ_MIN_POOL, S_IRUSR + S_IWUSR);
+  if (pmemobj_zalloc(pop, &pword_1, sizeof(Target), kTypeNum) != 0) {
+    std::cerr << pmemobj_errormsg() << std::endl;
+    std::terminate();
+  }
+  if (pmemobj_zalloc(pop, &pword_2, sizeof(Target), kTypeNum) != 0) {
+    std::cerr << pmemobj_errormsg() << std::endl;
+    std::terminate();
+  }
+  auto *word_1 = reinterpret_cast<Target *>(pmemobj_direct(pword_1));
+  auto *word_2 = reinterpret_cast<Target *>(pmemobj_direct(pword_2));
+
+  // create a pool to manage PMwCAS descriptors
+  ::dbgroup::atomic::pmwcas::DescriptorPool pool{kDescriptorPath};
 
   // a lambda function for multi-threading
   auto f = [&]() {
-    for (size_t i = 0; i < kExecNum; ++i) {
-      // continue until a MwCAS operation succeeds
-      while (true) {
-        // create a MwCAS descriptor
-        MwCASDescriptor desc{};
+    // get a PMwCAS descriptor from the pool
+    auto *desc = pool.Get();
 
+    for (size_t i = 0; i < kExecNum; ++i) {
+      // continue until a PMwCAS operation succeeds
+      do {
         // prepare expected/desired values
-        const auto old_1 = MwCASDescriptor::Read<Target>(&word_1);
+        const auto old_1 = ::dbgroup::atomic::pmwcas::Read<Target>(word_1);
         const auto new_1 = old_1 + 1;
-        const auto old_2 = MwCASDescriptor::Read<Target>(&word_2);
+        const auto old_2 = ::dbgroup::atomic::pmwcas::Read<Target>(word_2);
         const auto new_2 = old_2 + 1;
 
-        // register MwCAS targets with the descriptor
-        desc.AddMwCASTarget(&word_1, old_1, new_1);
-        desc.AddMwCASTarget(&word_2, old_2, new_2);
+        // register PMwCAS targets with the descriptor
+        desc->Add(word_1, old_1, new_1, std::memory_order_relaxed);
+        desc->Add(word_2, old_2, new_2, std::memory_order_relaxed);
+      } while (!desc->PMwCAS());  // try PMwCAS
 
-        // try MwCAS
-        if (desc.MwCAS()) break;
-      }
+      // The internal state is reset in the PMwCAS function, so you can use the same
+      // descriptor instance in a procedure.
     }
   };
 
-  // perform MwCAS operations with multi-threads
+  // perform PMwCAS operations with multi-threads
   std::vector<std::thread> threads;
   for (size_t i = 0; i < kThreadNum; ++i) threads.emplace_back(f);
-  for (auto&& thread : threads) thread.join();
+  for (auto &&thread : threads) thread.join();
 
-  // check whether MwCAS operations are performed consistently
-  std::cout << "1st field: " << word_1 << std::endl  //
-            << "2nd field: " << word_2 << std::endl;
+  // check whether PMwCAS operations are performed consistently
+  std::cout << "1st field: " << ::dbgroup::atomic::pmwcas::Read<Target>(word_1) << std::endl  //
+            << "2nd field: " << ::dbgroup::atomic::pmwcas::Read<Target>(word_2) << std::endl;
+
+  // close the pool
+  pmemobj_free(&pword_1);
+  pmemobj_free(&pword_2);
+  pmemobj_close(pop);
 
   return 0;
 }
@@ -138,28 +171,29 @@ main([[maybe_unused]] int argc, [[maybe_unused]] char** argv)
 This code will output the following results.
 
 ```txt
-1st field: 4000000
-2nd field: 4000000
+1st field: 400000
+2nd field: 400000
 ```
 
-### Swapping Your Own Classes with MwCAS
+### Swapping Your Own Classes with PMwCAS
 
-By default, this library only deal with `unsigned long` and pointer types as MwCAS targets. To make your own class the target of MwCAS operations, it must satisfy the following conditions:
+By default, this library only deal with `unsigned long` and pointer types as PMwCAS targets. To make your own class the target of PMwCAS operations, it must satisfy the following conditions:
 
 1. the byte length of the class is `8` (i.e., `static_assert(sizeof(<your_class>) == 8)`),
-2. at least the last one bit is reserved for MwCAS and initialized by zeros,
+2. at least the last one (two with dirty flags) bit is reserved for PMwCAS and initialized by zeros,
 3. the class satisfies [the conditions of the std::atomic template](https://en.cppreference.com/w/cpp/atomic/atomic#Primary_template), and
-4. a specialized `CanMwCAS` function is implemented in `dbgroup::atomic::mwcas` namespace and returns `true`.
+4. a specialized `CanPMwCAS` function is implemented in `dbgroup::atomic::pmwcas` namespace and returns `true`.
 
-The following snippet is an example implementation of a class that can be processed by MwCAS operations.
+The following snippet is an example implementation of a class that can be processed by PMwCAS operations.
 
 ```cpp
 struct MyClass {
   /// an actual data
   uint64_t data : 63;
 
-  /// reserve at least one bit for MwCAS operations
+  /// reserve at least one bit for PMwCAS operations
   uint64_t control_bits : 1;
+  // uint64_t control_bits : 2; // recquire two bits if you use dirty flags
 
   // control bits must be initialzed by zeros
   constexpr MyClass() : data{}, control_bits{0} {
@@ -174,24 +208,24 @@ struct MyClass {
   constexpr MyClass &operator=(MyClass &&) = default;
 };
 
-namespace dbgroup::atomic::mwcas
+namespace dbgroup::atomic::pmwcas
 {
 /**
- * @brief Specialization to enable MwCAS to swap our sample class.
+ * @brief Specialization to enable PMwCAS to swap our sample class.
  *
  */
 template <>
 constexpr bool
-CanMwCAS<MyClass>()
+CanPMwCAS<MyClass>()
 {
   return true;
 }
 
-}  // namespace dbgroup::atomic::mwcas
+}  // namespace dbgroup::atomic::pmwcas
 ```
 
 ## Acknowledgments
 
 This work is based on results obtained from project JPNP16007 commissioned by the New Energy and Industrial Technology Development Organization (NEDO). In addition, this work was supported partly by KAKENHI (16H01722 and 20K19804).
 
-[^1]: T. L. Harris, K. Fraser, and I. A. Pratt, "A practical multi-word compare-and-swap operation,” In Proc. DISC, pp. 265-279, 2002.
+[^1]: K. Sugiura and Y. Ishikawa, "Implementation of a Multi-Word Compare-and-Swap Operation without Garbage Collection," IEICE Transactions on Information and Systems, Vol. E105-D, No.5, pp. 946-954, May 2022. (DOI: [10.1587/transinf.2021DAP0011](https://doi.org/10.1587/transinf.2021DAP0011))
