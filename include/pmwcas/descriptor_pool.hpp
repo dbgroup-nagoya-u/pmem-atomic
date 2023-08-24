@@ -56,7 +56,8 @@ class DescriptorPool
       const std::string &pmem_path,
       const std::string &layout_name = "pmwcas_desc_pool")
   {
-    constexpr size_t kSize = sizeof(PMwCASDescriptor) * (kMaxThreadNum + 1) + PMEMOBJ_MIN_POOL;
+    constexpr size_t kDescPoolSize = sizeof(PMwCASDescriptor) * (kMaxThreadNum + 1);
+    constexpr size_t kPoolSize = kDescPoolSize + PMEMOBJ_MIN_POOL;
     constexpr auto kModeRW = S_IRUSR | S_IWUSR;  // NOLINT
     constexpr uintptr_t kMask = kPMEMLineSize - 1;
 
@@ -67,7 +68,7 @@ class DescriptorPool
     if (may_dirty) {
       pop_ = pmemobj_open(path, layout);
     } else {
-      pop_ = pmemobj_create(path, layout, kSize, kModeRW);
+      pop_ = pmemobj_create(path, layout, kPoolSize, kModeRW);
     }
     if (pop_ == nullptr) {
       std::cerr << pmemobj_errormsg() << std::endl;
@@ -75,7 +76,7 @@ class DescriptorPool
     }
 
     // get the pointer to descriptors
-    auto &&root = pmemobj_root(pop_, kSize);
+    auto &&root = pmemobj_root(pop_, kDescPoolSize);
     auto addr = reinterpret_cast<uintptr_t>(pmemobj_direct(root));
     if ((addr & kMask) > 0) {
       // move the address to the Intel Optane alignment
@@ -86,7 +87,7 @@ class DescriptorPool
     // if the pool was on persistent memory, check for dirty descriptors
     if (may_dirty) {
       for (size_t i = 0; i < kMaxThreadNum; ++i) {
-        desc_pool_[i].CompletePMwCAS();
+        desc_pool_[i].Recover();
       }
     }
   }
@@ -124,7 +125,9 @@ class DescriptorPool
   Get()  //
       -> PMwCASDescriptor *
   {
-    return &(desc_pool_[::dbgroup::thread::IDManager::GetThreadID()]);
+    auto *desc = &(desc_pool_[::dbgroup::thread::IDManager::GetThreadID()]);
+    desc->Reset();
+    return desc;
   }
 
  private:
@@ -133,10 +136,10 @@ class DescriptorPool
    *##################################################################################*/
 
   /// @brief The pmemobj_pool for holding PMwCAS descriptors.
-  PMEMobjpool *pop_ = nullptr;
+  PMEMobjpool *pop_{nullptr};
 
   /// @brief The pool of PMwCAS descriptors.
-  PMwCASDescriptor *desc_pool_ = nullptr;
+  PMwCASDescriptor *desc_pool_{nullptr};
 };
 
 }  // namespace dbgroup::atomic::pmwcas

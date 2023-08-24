@@ -8,27 +8,33 @@ buildType:
       buildType: Debug
       settings:
         CMAKE_CXX_CLANG_TIDY: "clang-tidy"
+        PMWCAS_USE_DIRTY_FLAG: OFF
+        PMWCAS_CAPACITY: 6
         PMWCAS_BUILD_TESTS: ON
         DBGROUP_TEST_THREAD_NUM: 8
+        DBGROUP_TEST_EXEC_NUM: "5E4"
         DBGROUP_TEST_TMP_PMEM_PATH: /pmem_tmp
-        PMWCAS_USE_DIRTY_FLAG: OFF
     relWithDebInfo:
       short: RelWithDebInfo
       long: Perform optimizations and include debugging informatin
       buildType: RelWithDebInfo
       settings:
         CMAKE_CXX_CLANG_TIDY: "clang-tidy"
+        PMWCAS_USE_DIRTY_FLAG: OFF
+        PMWCAS_CAPACITY: 6
         PMWCAS_BUILD_TESTS: ON
         DBGROUP_TEST_THREAD_NUM: 8
+        DBGROUP_TEST_EXEC_NUM: "1E5"
         DBGROUP_TEST_TMP_PMEM_PATH: /pmem_tmp
-        PMWCAS_USE_DIRTY_FLAG: OFF
     release:
       short: Release
       long: Perform optimizations and omit debugging informatin
       buildType: Release
       settings:
         CMAKE_CXX_CLANG_TIDY: "clang-tidy"
+        PMWCAS_USE_DIRTY_FLAG: OFF
+        PMWCAS_CAPACITY: 6
         PMWCAS_BUILD_TESTS: ON
         DBGROUP_TEST_THREAD_NUM: 8
+        DBGROUP_TEST_EXEC_NUM: "1E5"
         DBGROUP_TEST_TMP_PMEM_PATH: /pmem_tmp
-        PMWCAS_USE_DIRTY_FLAG: OFF

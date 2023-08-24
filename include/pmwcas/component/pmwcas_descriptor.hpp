@@ -167,10 +167,8 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
   PMwCAS()  //
       -> bool
   {
-    constexpr size_t kStatusSize = 1;
-
+    const PMwCASField desc_addr{this, kIsDescriptor};
     const size_t desc_size = 2 * kWordSize + sizeof(PMwCASTarget) * target_count_;
-    const PMwCASField desc_addr{this, kDescriptorFlag};
 
     // initialize and persist PMwCAS status
     status_ = DescStatus::kUndecided;
@@ -190,13 +188,12 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
         do {
           targets_[i].UndoPMwCAS();
         } while (++i < embedded_count);
-        if constexpr (!component::kIsDirtyFlagEnabled) {
+        if constexpr (!kUseDirtyFlag) {
           pmem_drain();
         }
       }
 
       // reset the descriptor
-      target_count_ = 0;
       status_ = DescStatus::kFinished;
       return false;
     }
@@ -213,21 +210,19 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
     for (size_t i = 0; i < target_count_; ++i) {
       targets_[i].RedoPMwCAS();
     }
-    if constexpr (!component::kIsDirtyFlagEnabled) {
+    if constexpr (!kUseDirtyFlag) {
       pmem_drain();
     }
 
     // reset the descriptor
-    target_count_ = 0;
     status_ = DescStatus::kFinished;
     return true;
   }
 
   void
-  CompletePMwCAS()
+  Recover()
   {
-    const PMwCASField desc_addr{this, kDescriptorFlag};
-    constexpr size_t kStatusSize = 1;
+    const PMwCASField desc_addr{this, kIsDescriptor};
 
     // roll forward or roll back PMwCAS
     // when the status is Finished, do nothing
@@ -240,8 +235,7 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
 
     // change status and persist descriptor
     status_ = DescStatus::kFinished;
-    pmem_flush(&status_, kStatusSize);
-    pmem_drain();
+    pmem_persist(&status_, kStatusSize);
   }
 
  private:
@@ -249,14 +243,11 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
    * Internal constants
    *##################################################################################*/
 
-  /// the maximum number of retries for preventing busy loops.
-  static constexpr size_t kRetryNum = 10UL;
+  /// @brief The size of PMwCAS progress states in bytes.
+  static constexpr size_t kStatusSize = 1;
 
-  /// a sleep time for preventing busy loops.
-  static constexpr auto kShortSleep = std::chrono::microseconds{10};
-
-  /// flag for descriptor.
-  static constexpr auto kDescriptorFlag = true;
+  /// @brief A flag to indicate the PMwCAS descriptor.
+  static constexpr bool kIsDescriptor = true;
 
   /*####################################################################################
    * Internal member variables

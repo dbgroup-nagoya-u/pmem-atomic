@@ -35,15 +35,10 @@ CHECK_INCLUDE_FILE_CXX("xmmintrin.h" PMWCAS_HAS_SPINLOCK_HINT)
 # PMwCAS configurations
 #--------------------------------------------------------------------------------------#
 
-set(PMWCAS_CAPACITY "4" CACHE STRING "The maximum number of target words for PMwCAS.")
-
-set(PMWCAS_DESCRIPTOR_POOL_SIZE "8" CACHE STRING "The maximum descriptor pool size.")
-
-set(PMWCAS_RETRY_THRESHOLD "10" CACHE STRING "The maximum number of retries for preventing busy loops.")
-
-set(PMWCAS_SLEEP_TIME "10" CACHE STRING "A sleep time for preventing busy loops [us].")
-
 option(PMWCAS_USE_DIRTY_FLAG "Use dirty flag to indicate words not persisted." OFF)
+set(PMWCAS_CAPACITY "6" CACHE STRING "The maximum number of target words for PMwCAS.")
+set(PMWCAS_RETRY_THRESHOLD "10" CACHE STRING "The maximum number of retries for preventing busy loops.")
+set(PMWCAS_SLEEP_TIME "10" CACHE STRING "A sleep time for preventing busy loops [us].")
 
 #--------------------------------------------------------------------------------------#
 # Configure external libraries
@@ -69,7 +64,6 @@ if(NOT TARGET dbgroup::${PROJECT_NAME})
   )
   target_compile_definitions(${PROJECT_NAME} INTERFACE
     PMWCAS_CAPACITY=${PMWCAS_CAPACITY}
-    PMWCAS_DESCRIPTOR_POOL_SIZE=${PMWCAS_DESCRIPTOR_POOL_SIZE}
     PMWCAS_RETRY_THRESHOLD=${PMWCAS_RETRY_THRESHOLD}
     PMWCAS_SLEEP_TIME=${PMWCAS_SLEEP_TIME}
     $<$<BOOL:${PMWCAS_USE_DIRTY_FLAG}>:PMWCAS_USE_DIRTY_FLAG>

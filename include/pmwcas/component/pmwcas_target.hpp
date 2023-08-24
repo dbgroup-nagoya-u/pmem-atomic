@@ -130,7 +130,7 @@ class PMwCASTarget
   {
     auto *addr = static_cast<std::atomic<PMwCASField> *>(pmemobj_direct(oid_));
 
-    if constexpr (kIsDirtyFlagEnabled) {
+    if constexpr (kUseDirtyFlag) {
       auto dirty_val = new_val_;
       dirty_val.SetDirtyFlag(true);
       addr->store(dirty_val, std::memory_order_relaxed);
@@ -152,7 +152,7 @@ class PMwCASTarget
   {
     auto *addr = static_cast<std::atomic<PMwCASField> *>(pmemobj_direct(oid_));
 
-    if constexpr (kIsDirtyFlagEnabled) {
+    if constexpr (kUseDirtyFlag) {
       auto dirty_val = old_val_;
       dirty_val.SetDirtyFlag(true);
       addr->store(dirty_val, std::memory_order_relaxed);
@@ -178,7 +178,7 @@ class PMwCASTarget
     const auto desired = (succeeded) ? new_val_ : old_val_;
     addr->compare_exchange_strong(desc_addr, desired, std::memory_order_relaxed);
 
-    if constexpr (kIsDirtyFlagEnabled) {
+    if constexpr (kUseDirtyFlag) {
       // if CAS failed, `desc_addr` has the current value
       if (desc_addr.IsNotPersisted()) {
         auto val = desc_addr;

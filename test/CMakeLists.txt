@@ -21,6 +21,12 @@ set(
 )
 
 set(
+  DBGROUP_TEST_EXEC_NUM
+  "1E5" CACHE STRING
+  "The number of operations performed per thread."
+)
+
+set(
   DBGROUP_TEST_TMP_PMEM_PATH
   "/tmp" CACHE STRING
   "The path to a durable storage."
@@ -51,6 +57,7 @@ function(ADD_PMWCAS_TEST PMWCAS_TEST_TARGET)
   )
   target_compile_definitions(${PMWCAS_TEST_TARGET} PRIVATE
     DBGROUP_TEST_THREAD_NUM=${DBGROUP_TEST_THREAD_NUM}
+    DBGROUP_TEST_EXEC_NUM=${DBGROUP_TEST_EXEC_NUM}
     DBGROUP_TEST_TMP_PMEM_PATH=${DBGROUP_TEST_TMP_PMEM_PATH}
   )
 

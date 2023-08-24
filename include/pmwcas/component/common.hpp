@@ -40,16 +40,10 @@ namespace dbgroup::atomic::pmwcas::component
  *####################################################################################*/
 
 enum DescStatus {
+  kFinished = 0,
   kUndecided,
   kSucceeded,
-  kFinished
 };
-
-#ifdef PMWCAS_USE_DIRTY_FLAG
-constexpr bool kIsDirtyFlagEnabled = true;
-#else
-constexpr bool kIsDirtyFlagEnabled = false;
-#endif
 
 /*######################################################################################
  * Global utility structs

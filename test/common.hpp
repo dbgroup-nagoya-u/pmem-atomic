@@ -24,7 +24,9 @@
 #define DBGROUP_ADD_QUOTES_INNER(x) #x                     // NOLINT
 #define DBGROUP_ADD_QUOTES(x) DBGROUP_ADD_QUOTES_INNER(x)  // NOLINT
 
-constexpr size_t kThreadNum = DBGROUP_TEST_THREAD_NUM;
+constexpr size_t kTestThreadNum = DBGROUP_TEST_THREAD_NUM;
+
+constexpr size_t kExecNum = DBGROUP_TEST_EXEC_NUM;
 
 /**
  * @brief An example class to represent CAS-updatable data.

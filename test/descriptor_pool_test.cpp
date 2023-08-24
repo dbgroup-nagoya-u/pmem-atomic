@@ -35,7 +35,6 @@ namespace dbgroup::atomic::pmwcas::test
 
 constexpr std::string_view kTmpPMEMPath = DBGROUP_ADD_QUOTES(DBGROUP_TEST_TMP_PMEM_PATH);
 constexpr const char *kPoolName = "pmwcas_descriptor_pool_test";
-constexpr const char *kLayout = "pmwcas_descriptor_pool";
 
 class DescriptorPoolFixture : public ::testing::Test
 {
@@ -55,7 +54,7 @@ class DescriptorPoolFixture : public ::testing::Test
       pool_path /= kPoolName;
       std::filesystem::remove(pool_path);
 
-      pool_ = std::make_unique<DescriptorPool>(pool_path, kLayout);
+      pool_ = std::make_unique<DescriptorPool>(pool_path);
     } catch (const std::exception &e) {
       std::cerr << e.what() << std::endl;
       std::terminate();
@@ -72,37 +71,19 @@ class DescriptorPoolFixture : public ::testing::Test
    *##################################################################################*/
 
   void
-  RunInOneThread()
+  GetOneDescriptor()
   {
-    auto *desc_1 = pool_->Get();
-    auto *desc_2 = pool_->Get();
+    auto f = [&]() {
+      auto *desc_1 = pool_->Get();
+      auto *desc_2 = pool_->Get();
 
-    // check if they are the same descriptor
-    EXPECT_EQ(desc_1, desc_2);
+      // check if they are the same descriptor
+      EXPECT_EQ(desc_1, desc_2);
+    };
+
+    std::thread t{f};
+    t.join();
   }
-
-  void
-  RunInAllThread(const size_t pool_size)
-  {
-    // after getting descriptors for all threads,
-    // get another one in another thread
-    GetAllDescriptor(pool_size);
-  }
-
-  void
-  RunInAllThreadTwice(const size_t pool_size)
-  {
-    // get descriptors in all threads
-    GetAllDescriptor(pool_size);
-
-    // once again
-    GetAllDescriptor(pool_size);
-  }
-
- private:
-  /*####################################################################################
-   * Internal utility functions
-   *##################################################################################*/
 
   void
   GetAllDescriptor(const size_t pool_size)
@@ -152,6 +133,11 @@ class DescriptorPoolFixture : public ::testing::Test
     extra_t.join();
   }
 
+ private:
+  /*####################################################################################
+   * Internal utility functions
+   *##################################################################################*/
+
   void
   GetDescriptor(std::promise<PMwCASDescriptor *> p)
   {
@@ -186,19 +172,18 @@ class DescriptorPoolFixture : public ::testing::Test
 
 TEST_F(DescriptorPoolFixture, GetTwoSameDescriptorInOneThread)
 {  //
-  RunInOneThread();
+  GetOneDescriptor();
 }
 
 TEST_F(DescriptorPoolFixture, GetDifferentDescriptorsInAllThread)
-{
-  auto pool_size = PMWCAS_DESCRIPTOR_POOL_SIZE;
-  RunInAllThread(pool_size);
+{  //
+  GetAllDescriptor(kMaxThreadNum);
 }
 
 TEST_F(DescriptorPoolFixture, GetDifferentDescriptorsInAllThreadTwice)
 {
-  auto pool_size = PMWCAS_DESCRIPTOR_POOL_SIZE;
-  RunInAllThreadTwice(pool_size);
+  GetAllDescriptor(kMaxThreadNum);
+  GetAllDescriptor(kMaxThreadNum);
 }
 
 }  // namespace dbgroup::atomic::pmwcas::test

@@ -34,20 +34,23 @@ namespace dbgroup::atomic::pmwcas
  * Global enum and constants
  *####################################################################################*/
 
-/// The maximum number of target words of PMwCAS
-constexpr size_t kPMwCASCapacity = PMWCAS_CAPACITY;
+#ifdef PMWCAS_USE_DIRTY_FLAG
+constexpr bool kUseDirtyFlag = true;
+#else
+constexpr bool kUseDirtyFlag = false;
+#endif
 
-/// The maximum descriptor pool size
-constexpr size_t kDescriptorPoolSize = PMWCAS_DESCRIPTOR_POOL_SIZE;
+/// The maximum number of target words of PMwCAS.
+constexpr size_t kPMwCASCapacity = PMWCAS_CAPACITY;
 
 /// The maximum number of retries for preventing busy loops.
 constexpr size_t kRetryNum = PMWCAS_RETRY_THRESHOLD;
 
-/// @brief The maximum number of threads used in a process.
-constexpr size_t kMaxThreadNum = ::dbgroup::thread::kMaxThreadNum;
-
 /// A sleep time for preventing busy loops [us].
 constexpr auto kShortSleep = std::chrono::microseconds{PMWCAS_SLEEP_TIME};
+
+/// @brief The maximum number of threads used in a process.
+constexpr size_t kMaxThreadNum = ::dbgroup::thread::kMaxThreadNum;
 
 /// Assumes that the length of one word is 8 bytes
 constexpr size_t kWordSize = 8;
