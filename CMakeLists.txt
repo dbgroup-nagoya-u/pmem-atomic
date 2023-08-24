@@ -35,7 +35,7 @@ CHECK_INCLUDE_FILE_CXX("xmmintrin.h" PMWCAS_HAS_SPINLOCK_HINT)
 # PMwCAS configurations
 #--------------------------------------------------------------------------------------#
 
-option(PMWCAS_USE_DIRTY_FLAG "Use dirty flag to indicate words not persisted." OFF)
+option(PMWCAS_USE_DIRTY_FLAG "Use dirty flags to indicate words that are not persisted." OFF)
 set(PMWCAS_CAPACITY "6" CACHE STRING "The maximum number of target words for PMwCAS.")
 set(PMWCAS_RETRY_THRESHOLD "10" CACHE STRING "The maximum number of retries for preventing busy loops.")
 set(PMWCAS_SLEEP_TIME "10" CACHE STRING "A sleep time for preventing busy loops [us].")

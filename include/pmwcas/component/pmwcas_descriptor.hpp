@@ -33,19 +33,47 @@
 namespace dbgroup::atomic::pmwcas
 {
 /**
+ * @brief Read a value from a given memory address.
+ *
+ * @tparam T An expected class of a target field.
+ * @param addr A target memory address to read.
+ * @param fence A flag for controling std::memory_order.
+ * @return A read value.
+ * @note If a memory address is included in PMwCAS target fields, it must be read
+ * using this function.
+ */
+template <class T>
+inline auto
+Read(  //
+    const void *addr,
+    const std::memory_order fence = std::memory_order_seq_cst)  //
+    -> T
+{
+  using PMwCASField = component::PMwCASField;
+
+  const auto *target_addr = static_cast<const std::atomic<PMwCASField> *>(addr);
+  PMwCASField target_word{};
+  while (true) {
+    for (size_t i = 1; true; ++i) {
+      target_word = target_addr->load(fence);
+      if (!target_word.IsPMwCASDescriptor()) return target_word.GetTargetData<T>();
+      if (i > kRetryNum) break;
+      SPINLOCK_HINT
+    }
+
+    // wait to prevent busy loop
+    std::this_thread::sleep_for(kShortSleep);
+  }
+}
+
+namespace component
+{
+/**
  * @brief A class to manage a PMwCAS (multi-words compare-and-swap) operation.
  *
  */
 class alignas(kPMEMLineSize) PMwCASDescriptor
 {
-  /*####################################################################################
-   * Type aliases
-   *##################################################################################*/
-
-  using PMwCASTarget = component::PMwCASTarget;
-  using PMwCASField = component::PMwCASField;
-  using DescStatus = component::DescStatus;
-
  public:
   /*####################################################################################
    * Public constructors and assignment operators
@@ -101,39 +129,6 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
    *##################################################################################*/
 
   /**
-   * @brief Read a value from a given memory address.
-   *
-   * @tparam T An expected class of a target field.
-   * @param addr A target memory address to read.
-   * @param fence A flag for controling std::memory_order.
-   * @return A read value.
-   * @note If a memory address is included in PMwCAS target fields, it must be read
-   * using this function.
-   */
-  template <class T>
-  static auto
-  Read(  //
-      const void *addr,
-      const std::memory_order fence = std::memory_order_seq_cst)  //
-      -> T
-  {
-    const auto *target_addr = static_cast<const std::atomic<PMwCASField> *>(addr);
-
-    PMwCASField target_word{};
-    while (true) {
-      for (size_t i = 1; true; ++i) {
-        target_word = target_addr->load(fence);
-        if (!target_word.IsPMwCASDescriptor()) return target_word.GetTargetData<T>();
-        if (i > kRetryNum) break;
-        SPINLOCK_HINT
-      }
-
-      // wait to prevent busy loop
-      std::this_thread::sleep_for(kShortSleep);
-    }
-  }
-
-  /**
    * @brief Add a new PMwCAS target to this descriptor.
    *
    * @tparam T A class of a target.
@@ -144,7 +139,7 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
    */
   template <class T>
   constexpr void
-  AddPMwCASTarget(  //
+  Add(  //
       void *addr,
       const T old_val,
       const T new_val,
@@ -193,6 +188,7 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
 
       // reset the descriptor
       status_ = DescStatus::kFinished;
+      target_count_ = 0;
       return false;
     }
 
@@ -214,6 +210,7 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
 
     // reset the descriptor
     status_ = DescStatus::kFinished;
+    target_count_ = 0;
     return true;
   }
 
@@ -265,6 +262,7 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
   PMwCASTarget targets_[kPMwCASCapacity];
 };
 
+}  // namespace component
 }  // namespace dbgroup::atomic::pmwcas
 
 #endif  // PMWCAS_PMWCAS_DESCRIPTOR_HPP

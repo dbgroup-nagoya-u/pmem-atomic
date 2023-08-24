@@ -43,6 +43,7 @@ class DescriptorPool
    *##############################################################################################*/
 
   using DescStatus = component::DescStatus;
+  using PMwCASDescriptor = component::PMwCASDescriptor;
 
  public:
   /*####################################################################################

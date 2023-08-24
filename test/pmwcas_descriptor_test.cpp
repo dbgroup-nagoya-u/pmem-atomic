@@ -33,7 +33,7 @@
 // local sources
 #include "common.hpp"
 
-namespace dbgroup::atomic::pmwcas::test
+namespace dbgroup::atomic::pmwcas::component::test
 {
 /*######################################################################################
  * Global constants
@@ -185,9 +185,9 @@ class PMwCASDescriptorFixture : public ::testing::Test
           PMwCASDescriptor desc{};
           for (auto &&idx : targets) {
             auto *addr = &(target_fields_[idx]);
-            const auto cur_val = PMwCASDescriptor::Read<Target>(addr);
+            const auto cur_val = Read<Target>(addr);
             const auto new_val = cur_val + 1;
-            desc.AddPMwCASTarget(addr, cur_val, new_val);
+            desc.Add(addr, cur_val, new_val);
           }
 
           // perform PMwCAS
@@ -226,4 +226,4 @@ TEST_F(PMwCASDescriptorFixture, PMwCASWithMultiThreadsCorrectlyIncrementTargets)
   VerifyPMwCAS(kTestThreadNum);
 }
 
-}  // namespace dbgroup::atomic::pmwcas::test
+}  // namespace dbgroup::atomic::pmwcas::component::test
