@@ -17,22 +17,18 @@
 // the corresponding header
 #include "pmwcas/component/pmwcas_target.hpp"
 
-// C++ standard libraries
-#include <filesystem>
-
-// external libraries
-#include "gtest/gtest.h"
-
 // local sources
 #include "common.hpp"
 
 namespace dbgroup::atomic::pmwcas::component::test
 {
+// prepare a temporary directory
+auto *const env = testing::AddGlobalTestEnvironment(new TmpDirManager);
+
 /*######################################################################################
  * Global constants
  *####################################################################################*/
 
-constexpr std::string_view kTmpPMEMPath = DBGROUP_ADD_QUOTES(DBGROUP_TEST_TMP_PMEM_PATH);
 constexpr const char *kPoolName = "pmwcas_pmwcas_target_test";
 constexpr const char *kLayout = "target";
 constexpr auto kModeRW = S_IRUSR | S_IWUSR;  // NOLINT
@@ -48,10 +44,6 @@ class PMwCASTargetFixture : public ::testing::Test
   void
   SetUp() override
   {
-    if (kTmpPMEMPath.empty()) {
-      GTEST_SKIP_("The persistent memory path is not set.");
-    }
-
     if constexpr (std::is_same_v<Target, uint64_t *>) {
       old_val_ = new uint64_t{1};
       new_val_ = new uint64_t{2};
@@ -61,16 +53,16 @@ class PMwCASTargetFixture : public ::testing::Test
     }
 
     // create a user directory for testing
-    const std::string user_name{std::getenv("USER")};
-    std::filesystem::path pool_path{kTmpPMEMPath};
-    pool_path /= user_name;
-    std::filesystem::create_directories(pool_path);
+    auto &&pool_path = GetTmpPoolPath();
     pool_path /= kPoolName;
-    std::filesystem::remove(pool_path);
 
     // create a persistent pool for testing
     constexpr size_t kPoolSize = PMEMOBJ_MIN_POOL;
-    pop_ = pmemobj_create(pool_path.c_str(), kLayout, kPoolSize, kModeRW);
+    if (std::filesystem::exists(pool_path)) {
+      pop_ = pmemobj_open(pool_path.c_str(), kLayout);
+    } else {
+      pop_ = pmemobj_create(pool_path.c_str(), kLayout, kPoolSize, kModeRW);
+    }
     if (pmemobj_zalloc(pop_, &oid_, sizeof(Target), 0) != 0) {
       std::cerr << pmemobj_errormsg() << std::endl;
       throw std::exception{};

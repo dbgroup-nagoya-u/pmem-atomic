@@ -17,8 +17,14 @@
 #ifndef TEST_COMMON_HPP
 #define TEST_COMMON_HPP
 
+// C++ standard libraries
+#include <filesystem>
 #include <functional>
 
+// external sources
+#include "gtest/gtest.h"
+
+// local sources
 #include "pmwcas/utility.hpp"
 
 #define DBGROUP_ADD_QUOTES_INNER(x) #x                     // NOLINT
@@ -27,6 +33,57 @@
 constexpr size_t kTestThreadNum = DBGROUP_TEST_THREAD_NUM;
 
 constexpr size_t kExecNum = DBGROUP_TEST_EXEC_NUM;
+
+constexpr std::string_view kTmpPMEMPath = DBGROUP_ADD_QUOTES(DBGROUP_TEST_TMP_PMEM_PATH);
+
+const std::string_view use_name = std::getenv("USER");
+
+inline auto
+GetTmpPoolPath()  //
+    -> std::filesystem::path
+{
+  std::filesystem::path pool_path{kTmpPMEMPath};
+  pool_path /= use_name;
+  pool_path /= "tmp_test_dir";
+
+  return pool_path;
+}
+
+class TmpDirManager : public ::testing::Environment
+{
+ public:
+  // constructor/destructor
+  TmpDirManager() = default;
+  TmpDirManager(const TmpDirManager &) = default;
+  TmpDirManager(TmpDirManager &&) = default;
+  TmpDirManager &operator=(const TmpDirManager &) = default;
+  TmpDirManager &operator=(TmpDirManager &&) = default;
+  ~TmpDirManager() override = default;
+
+  // Override this to define how to set up the environment.
+  void
+  SetUp() override
+  {
+    // check the specified path
+    if (kTmpPMEMPath.empty() || !std::filesystem::exists(kTmpPMEMPath)) {
+      std::cerr << "WARN: The correct path to persistent memory is not set." << std::endl;
+      GTEST_SKIP();
+    }
+
+    // prepare a temporary directory for testing
+    const auto &pool_path = GetTmpPoolPath();
+    std::filesystem::remove_all(pool_path);
+    std::filesystem::create_directories(pool_path);
+  }
+
+  // Override this to define how to tear down the environment.
+  void
+  TearDown() override
+  {
+    const auto &pool_path = GetTmpPoolPath();
+    std::filesystem::remove_all(pool_path);
+  }
+};
 
 /**
  * @brief An example class to represent CAS-updatable data.

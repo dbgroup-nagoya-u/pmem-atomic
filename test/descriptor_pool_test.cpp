@@ -16,6 +16,7 @@
 
 #include "pmwcas/descriptor_pool.hpp"
 
+// C++ standard libraries
 #include <chrono>
 #include <future>
 #include <iterator>
@@ -24,16 +25,18 @@
 #include <thread>
 #include <unordered_set>
 
+// local sources
 #include "common.hpp"
-#include "gtest/gtest.h"
 
 namespace dbgroup::atomic::pmwcas::test
 {
+// prepare a temporary directory
+auto *const env = testing::AddGlobalTestEnvironment(new TmpDirManager);
+
 /*######################################################################################
  * Global constants
  *####################################################################################*/
 
-constexpr std::string_view kTmpPMEMPath = DBGROUP_ADD_QUOTES(DBGROUP_TEST_TMP_PMEM_PATH);
 constexpr const char *kPoolName = "pmwcas_descriptor_pool_test";
 
 class DescriptorPoolFixture : public ::testing::Test
@@ -56,19 +59,9 @@ class DescriptorPoolFixture : public ::testing::Test
       GTEST_SKIP_("The persistent memory path is not set.");
     }
 
-    try {
-      const std::string user_name{std::getenv("USER")};
-      std::filesystem::path pool_path{kTmpPMEMPath};
-      pool_path /= user_name;
-      std::filesystem::create_directories(pool_path);
-      pool_path /= kPoolName;
-      std::filesystem::remove(pool_path);
-
-      pool_ = std::make_unique<DescriptorPool>(pool_path);
-    } catch (const std::exception &e) {
-      std::cerr << e.what() << std::endl;
-      std::terminate();
-    }
+    auto &&pool_path = GetTmpPoolPath();
+    pool_path /= kPoolName;
+    pool_ = std::make_unique<DescriptorPool>(pool_path);
   }
 
   void
