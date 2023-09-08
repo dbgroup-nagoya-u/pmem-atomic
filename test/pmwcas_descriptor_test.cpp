@@ -18,7 +18,6 @@
 #include "pmwcas/component/pmwcas_descriptor.hpp"
 
 // C++ standard libraries
-#include <filesystem>
 #include <future>
 #include <mutex>
 #include <random>
@@ -27,19 +26,18 @@
 #include <utility>
 #include <vector>
 
-// external libraries
-#include "gtest/gtest.h"
-
 // local sources
 #include "common.hpp"
 
 namespace dbgroup::atomic::pmwcas::component::test
 {
+// prepare a temporary directory
+auto *const env = testing::AddGlobalTestEnvironment(new TmpDirManager);
+
 /*######################################################################################
  * Global constants
  *####################################################################################*/
 
-constexpr std::string_view kTmpPMEMPath = DBGROUP_ADD_QUOTES(DBGROUP_TEST_TMP_PMEM_PATH);
 constexpr const char *kPoolName = "pmwcas_pmwcas_descriptor_test";
 constexpr const char *kLayout = "target";
 constexpr size_t kTargetFieldNum = kPMwCASCapacity * kTestThreadNum;
@@ -62,23 +60,17 @@ class PMwCASDescriptorFixture : public ::testing::Test
   void
   SetUp() override
   {
-    if (kTmpPMEMPath.empty()) {
-      GTEST_SKIP_("The persistent memory path is not set.");
-    }
-
     constexpr size_t kPoolSize = PMEMOBJ_MIN_POOL;
     constexpr size_t kArraySize = kWordSize * kTargetFieldNum;
 
-    // create a user directory for testing
-    const std::string user_name{std::getenv("USER")};
-    std::filesystem::path pool_path{kTmpPMEMPath};
-    pool_path /= user_name;
-    std::filesystem::create_directories(pool_path);
-    pool_path /= kPoolName;
-    std::filesystem::remove(pool_path);
-
     // create a persistent pool for testing
-    pop_ = pmemobj_create(pool_path.c_str(), kLayout, kPoolSize, kModeRW);
+    auto &&pool_path = GetTmpPoolPath();
+    pool_path /= kPoolName;
+    if (std::filesystem::exists(pool_path)) {
+      pop_ = pmemobj_open(pool_path.c_str(), kLayout);
+    } else {
+      pop_ = pmemobj_create(pool_path.c_str(), kLayout, kPoolSize, kModeRW);
+    }
 
     // initialize target fields
     auto &&root = pmemobj_root(pop_, kArraySize);
