@@ -75,9 +75,9 @@ namespace component
 class alignas(kPMEMLineSize) PMwCASDescriptor
 {
  public:
-  /*####################################################################################
+  /*############################################################################
    * Public constructors and assignment operators
-   *##################################################################################*/
+   *##########################################################################*/
 
   /**
    * @brief Construct an empty descriptor for PMwCAS operations.
@@ -91,9 +91,9 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
   constexpr auto operator=(const PMwCASDescriptor &obj) -> PMwCASDescriptor & = default;
   constexpr auto operator=(PMwCASDescriptor &&) -> PMwCASDescriptor & = default;
 
-  /*####################################################################################
+  /*############################################################################
    * Public destructors
-   *##################################################################################*/
+   *##########################################################################*/
 
   /**
    * @brief Destroy the PMwCASDescriptor object.
@@ -101,9 +101,9 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
    */
   ~PMwCASDescriptor() = default;
 
-  /*####################################################################################
+  /*############################################################################
    * Public getters/setters
-   *##################################################################################*/
+   *##########################################################################*/
 
   /**
    * @return The number of targets added to PMwCAS.
@@ -115,9 +115,9 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
     return target_count_;
   }
 
-  /*####################################################################################
+  /*############################################################################
    * Public utility functions
-   *##################################################################################*/
+   *##########################################################################*/
 
   /**
    * @brief Add a new PMwCAS target to this descriptor.
@@ -221,9 +221,9 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
   }
 
  private:
-  /*####################################################################################
+  /*############################################################################
    * Internal constants
-   *##################################################################################*/
+   *##########################################################################*/
 
   /// @brief The size of PMwCAS progress states in bytes.
   static constexpr size_t kHeaderSize = 2 * kWordSize;
@@ -231,9 +231,9 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
   /// @brief A flag to indicate the PMwCAS descriptor.
   static constexpr bool kIsDescriptor = true;
 
-  /*####################################################################################
+  /*############################################################################
    * Internal member variables
-   *##################################################################################*/
+   *##########################################################################*/
 
   /// @brief The current state of a PMwCAS operation.
   DescStatus status_{DescStatus::kCompleted};
