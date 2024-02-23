@@ -52,7 +52,7 @@ function(ADD_PMWCAS_TEST PMWCAS_TEST_TARGET)
     $<$<STREQUAL:${CMAKE_BUILD_TYPE},"Debug">:"-g3 -O0 -pg">
   )
   target_link_libraries(${PMWCAS_TEST_TARGET} PRIVATE
-    dbgroup::pmwcas
+    dbgroup::${PROJECT_NAME}
     GTest::gtest_main
   )
   target_compile_definitions(${PMWCAS_TEST_TARGET} PRIVATE
