@@ -115,16 +115,6 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
     return target_count_;
   }
 
-  /**
-   * @brief Reset the current number of targets to zero.
-   *
-   */
-  void
-  Reset()
-  {
-    target_count_ = 0;
-  }
-
   /*####################################################################################
    * Public utility functions
    *##################################################################################*/
@@ -161,17 +151,16 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
   PMwCAS()  //
       -> bool
   {
-    const PMwCASWord desc_addr{this, kIsDescriptor};
-    const size_t desc_size = 2 * kWordSize + sizeof(PMwCASTarget) * target_count_;
+    const size_t desc_size = kHeaderSize + kWordSize + sizeof(PMwCASTarget) * target_count_;
 
     // initialize and persist PMwCAS status
-    status_ = DescStatus::kUndecided;
+    status_ = DescStatus::kFailed;
     pmem_persist(this, desc_size);
 
     // serialize PMwCAS operations by embedding a descriptor
     size_t embedded_count = 0;
     for (size_t i = 0; i < target_count_; ++i, ++embedded_count) {
-      if (!targets_[i].EmbedDescriptor(desc_addr)) break;
+      if (!targets_[i].EmbedDescriptor(desc_addr_)) break;
     }
 
     // complete PMwCAS
@@ -183,7 +172,7 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
       pmem_drain();
 
       // reset the descriptor
-      status_ = DescStatus::kFinished;
+      status_ = DescStatus::kCompleted;
       target_count_ = 0;
       return false;
     }
@@ -203,33 +192,32 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
     pmem_drain();
 
     // reset the descriptor
-    status_ = DescStatus::kFinished;
+    status_ = DescStatus::kCompleted;
     target_count_ = 0;
     return true;
   }
 
   /**
-   * @brief Perform the incomplete PMwCAS operation, if any.
+   * @brief Initialize this descriptor and perform recovery if needed.
    *
    */
   void
-  Recover()
+  Initialize()
   {
-    const PMwCASWord desc_addr{this, kIsDescriptor};
+    desc_addr_ = PMwCASWord{pmemobj_oid(this).off, kIsDescriptor};
 
-    // roll forward or roll back PMwCAS
-    // when the status is Finished, do nothing
-    if (status_ != DescStatus::kFinished) {
+    // roll forward or roll back PMwCAS if needed
+    if (status_ != DescStatus::kCompleted) {
       const auto succeeded = (status_ == DescStatus::kSucceeded);
       for (size_t i = 0; i < target_count_; ++i) {
-        targets_[i].Recover(succeeded, desc_addr);
+        targets_[i].Recover(succeeded, desc_addr_);
       }
     }
 
-    // change status and persist descriptor
-    status_ = DescStatus::kFinished;
+    // change status and persist a descriptor
+    status_ = DescStatus::kCompleted;
     target_count_ = 0;
-    pmem_persist(this, kHeaderSize);
+    pmem_flush(this, kHeaderSize + kWordSize);
   }
 
  private:
@@ -248,10 +236,13 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
    *##################################################################################*/
 
   /// @brief The current state of a PMwCAS operation.
-  DescStatus status_{DescStatus::kFinished};
+  DescStatus status_{DescStatus::kCompleted};
 
   /// @brief The number of targets added to PMwCAS.
   size_t target_count_{0};
+
+  /// @brief The address of this descriptor for identification.
+  PMwCASWord desc_addr_{0UL, kIsDescriptor};
 
   /// @brief Target instances of PMwCAS.
   PMwCASTarget targets_[kPMwCASCapacity];

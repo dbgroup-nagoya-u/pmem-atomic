@@ -68,8 +68,7 @@ class DescriptorPool
     // create/open a pool on persistent memory
     const auto *path = pmem_path.c_str();
     const auto *layout = layout_name.c_str();
-    const auto may_dirty = std::filesystem::exists(pmem_path);
-    if (may_dirty) {
+    if (std::filesystem::exists(pmem_path)) {
       pop_ = pmemobj_open(path, layout);
     } else {
       pop_ = pmemobj_create(path, layout, kPoolSize, kModeRW);
@@ -89,11 +88,10 @@ class DescriptorPool
     desc_pool_ = reinterpret_cast<PMwCASDescriptor *>(addr);
 
     // if the pool was on persistent memory, check for dirty descriptors
-    if (may_dirty) {
-      for (size_t i = 0; i < kMaxThreadNum; ++i) {
-        desc_pool_[i].Recover();
-      }
+    for (size_t i = 0; i < kMaxThreadNum; ++i) {
+      desc_pool_[i].Initialize();
     }
+    pmem_drain();
   }
 
   DescriptorPool(const DescriptorPool &) = delete;
@@ -130,9 +128,7 @@ class DescriptorPool
   Get()  //
       -> PMwCASDescriptor *
   {
-    auto *desc = &(desc_pool_[::dbgroup::thread::IDManager::GetThreadID()]);
-    desc->Reset();
-    return desc;
+    return &(desc_pool_[::dbgroup::thread::IDManager::GetThreadID()]);
   }
 
  private:
