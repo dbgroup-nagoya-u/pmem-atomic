@@ -85,7 +85,7 @@ if(NOT TARGET dbgroup::${PROJECT_NAME})
   target_include_directories(${PROJECT_NAME} INTERFACE
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
     "${LIBPMEM_INCLUDE_DIRS}"
-    "${LIBPMEMOBJ++_INCLUDE_DIRS}"
+    "${LIBPMEMOBJ_INCLUDE_DIRS}"
   )
   target_compile_definitions(${PROJECT_NAME} INTERFACE
     PMWCAS_CAPACITY=${PMWCAS_CAPACITY}
