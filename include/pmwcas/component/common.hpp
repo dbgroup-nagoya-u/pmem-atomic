@@ -21,13 +21,11 @@
 #include <atomic>
 
 // external system libraries
-#ifndef SPINLOCK_HINT
 #ifdef PMWCAS_HAS_SPINLOCK_HINT
 #include <xmmintrin.h>
-#define SPINLOCK_HINT _mm_pause();  // NOLINT
+#define PMWCAS_SPINLOCK_HINT _mm_pause();  // NOLINT
 #else
-#define SPINLOCK_HINT /* do nothing */
-#endif
+#define PMWCAS_SPINLOCK_HINT /* do nothing */
 #endif
 
 // local sources
@@ -47,37 +45,6 @@ enum DescStatus {
   kFinished = 0,
   kUndecided,
   kSucceeded,
-};
-
-/*######################################################################################
- * Global utility structs
- *####################################################################################*/
-
-/**
- * @brief An union to convert PMwCAS target data into uint64_t.
- *
- * @tparam T a type of target data
- */
-template <class T>
-union CASTargetConverter {
-  const T target_data;
-  const uint64_t converted_data;
-
-  explicit constexpr CASTargetConverter(const uint64_t converted) : converted_data{converted} {}
-
-  explicit constexpr CASTargetConverter(const T target) : target_data{target} {}
-};
-
-/**
- * @brief Specialization for unsigned long type.
- *
- */
-template <>
-union CASTargetConverter<uint64_t> {
-  const uint64_t target_data;
-  const uint64_t converted_data;
-
-  explicit constexpr CASTargetConverter(const uint64_t target) : target_data{target} {}
 };
 
 }  // namespace dbgroup::atomic::pmwcas::component

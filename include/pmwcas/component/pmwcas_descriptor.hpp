@@ -49,16 +49,16 @@ Read(  //
     const std::memory_order fence = std::memory_order_seq_cst)  //
     -> T
 {
-  using PMwCASField = component::PMwCASField;
+  using PMwCASWord = component::PMwCASWord;
 
-  const auto *target_addr = static_cast<const std::atomic<PMwCASField> *>(addr);
-  PMwCASField target_word{};
+  const auto *target_addr = static_cast<const std::atomic<PMwCASWord> *>(addr);
+  PMwCASWord target_word{};
   while (true) {
     for (size_t i = 1; true; ++i) {
       target_word = target_addr->load(fence);
-      if (!target_word.IsPMwCASDescriptor()) return target_word.GetTargetData<T>();
+      if (!target_word.IsIntermediate()) return target_word.GetTargetData<T>();
       if (i > kRetryNum) break;
-      SPINLOCK_HINT
+      PMWCAS_SPINLOCK_HINT
     }
 
     // wait to prevent busy loop
@@ -87,6 +87,7 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
 
   constexpr PMwCASDescriptor(const PMwCASDescriptor &) = default;
   constexpr PMwCASDescriptor(PMwCASDescriptor &&) = default;
+
   constexpr auto operator=(const PMwCASDescriptor &obj) -> PMwCASDescriptor & = default;
   constexpr auto operator=(PMwCASDescriptor &&) -> PMwCASDescriptor & = default;
 
@@ -160,7 +161,7 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
   PMwCAS()  //
       -> bool
   {
-    const PMwCASField desc_addr{this, kIsDescriptor};
+    const PMwCASWord desc_addr{this, kIsDescriptor};
     const size_t desc_size = 2 * kWordSize + sizeof(PMwCASTarget) * target_count_;
 
     // initialize and persist PMwCAS status
@@ -221,7 +222,7 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
   void
   Recover()
   {
-    const PMwCASField desc_addr{this, kIsDescriptor};
+    const PMwCASWord desc_addr{this, kIsDescriptor};
 
     // roll forward or roll back PMwCAS
     // when the status is Finished, do nothing

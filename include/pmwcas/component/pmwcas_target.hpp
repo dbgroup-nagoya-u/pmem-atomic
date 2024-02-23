@@ -25,7 +25,7 @@
 #include <libpmemobj.h>
 
 // local sources
-#include "pmwcas_field.hpp"
+#include "pmwcas_word.hpp"
 
 namespace dbgroup::atomic::pmwcas::component
 {
@@ -66,6 +66,7 @@ class PMwCASTarget
 
   constexpr PMwCASTarget(const PMwCASTarget &) = default;
   constexpr PMwCASTarget(PMwCASTarget &&) = default;
+
   constexpr auto operator=(const PMwCASTarget &obj) -> PMwCASTarget & = default;
   constexpr auto operator=(PMwCASTarget &&) -> PMwCASTarget & = default;
 
@@ -91,11 +92,11 @@ class PMwCASTarget
    * @retval false otherwise.
    */
   auto
-  EmbedDescriptor(const PMwCASField desc_addr)  //
+  EmbedDescriptor(const PMwCASWord desc_addr)  //
       -> bool
   {
-    auto *addr = static_cast<std::atomic<PMwCASField> *>(pmemobj_direct(oid_));
-    PMwCASField expected{};
+    auto *addr = static_cast<std::atomic<PMwCASWord> *>(pmemobj_direct(oid_));
+    PMwCASWord expected{};
     for (size_t i = 0; true; ++i) {
       // try to embed a PMwCAS descriptor
       expected = addr->load(std::memory_order_relaxed);
@@ -103,10 +104,10 @@ class PMwCASTarget
           && addr->compare_exchange_strong(expected, desc_addr, std::memory_order_relaxed)) {
         return true;
       }
-      if (!expected.IsPMwCASDescriptor() || i >= kRetryNum) return false;
+      if (!expected.IsIntermediate() || i >= kRetryNum) return false;
 
       // retry if another descriptor is embedded
-      SPINLOCK_HINT
+      PMWCAS_SPINLOCK_HINT
     }
   }
 
@@ -117,7 +118,7 @@ class PMwCASTarget
   void
   Flush()
   {
-    auto *addr = static_cast<std::atomic<PMwCASField> *>(pmemobj_direct(oid_));
+    auto *addr = static_cast<std::atomic<PMwCASWord> *>(pmemobj_direct(oid_));
     pmem_flush(addr, kWordSize);
   }
 
@@ -128,11 +129,11 @@ class PMwCASTarget
   void
   Redo()
   {
-    auto *addr = static_cast<std::atomic<PMwCASField> *>(pmemobj_direct(oid_));
+    auto *addr = static_cast<std::atomic<PMwCASWord> *>(pmemobj_direct(oid_));
 
     if constexpr (kUseDirtyFlag) {
       auto dirty_val = new_val_;
-      dirty_val.SetDirtyFlag(true);
+      dirty_val.SetDirtyFlag();
       addr->store(dirty_val, std::memory_order_relaxed);
       pmem_persist(addr, kWordSize);
       addr->store(new_val_, fence_);
@@ -150,11 +151,11 @@ class PMwCASTarget
   void
   Undo()
   {
-    auto *addr = static_cast<std::atomic<PMwCASField> *>(pmemobj_direct(oid_));
+    auto *addr = static_cast<std::atomic<PMwCASWord> *>(pmemobj_direct(oid_));
 
     if constexpr (kUseDirtyFlag) {
       auto dirty_val = old_val_;
-      dirty_val.SetDirtyFlag(true);
+      dirty_val.SetDirtyFlag();
       addr->store(dirty_val, std::memory_order_relaxed);
       pmem_persist(addr, kWordSize);
       addr->store(old_val_, std::memory_order_relaxed);
@@ -172,9 +173,9 @@ class PMwCASTarget
   void
   Recover(  //
       const bool succeeded,
-      PMwCASField desc_addr)
+      PMwCASWord desc_addr)
   {
-    auto *addr = static_cast<std::atomic<PMwCASField> *>(pmemobj_direct(oid_));
+    auto *addr = static_cast<std::atomic<PMwCASWord> *>(pmemobj_direct(oid_));
     const auto desired = (succeeded) ? new_val_ : old_val_;
     addr->compare_exchange_strong(desc_addr, desired, std::memory_order_relaxed);
 
@@ -182,7 +183,7 @@ class PMwCASTarget
       // if CAS failed, `desc_addr` has the current value
       if (desc_addr.IsNotPersisted()) {
         auto val = desc_addr;
-        val.SetDirtyFlag(false);
+        val.ClearDirtyFlag();
         addr->store(val, std::memory_order_relaxed);
       }
     }
@@ -199,10 +200,10 @@ class PMwCASTarget
   PMEMoid oid_{};
 
   /// @brief An expected value of a target field.
-  PMwCASField old_val_{};
+  PMwCASWord old_val_{};
 
   /// @brief An inserting value into a target field.
-  PMwCASField new_val_{};
+  PMwCASWord new_val_{};
 
   /// @brief A fence to be inserted when embedding a new value.
   std::memory_order fence_{std::memory_order_seq_cst};

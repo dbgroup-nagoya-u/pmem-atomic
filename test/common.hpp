@@ -92,13 +92,15 @@ class TmpDirManager : public ::testing::Environment
 class MyClass
 {
  public:
-  constexpr MyClass() : data_{}, control_bits_{0} {}
-  ~MyClass() = default;
+  constexpr MyClass() : data_{0}, control_bits_{0} {}
 
   constexpr MyClass(const MyClass &) = default;
-  constexpr auto operator=(const MyClass &) -> MyClass & = default;
   constexpr MyClass(MyClass &&) = default;
+
+  constexpr auto operator=(const MyClass &) -> MyClass & = default;
   constexpr auto operator=(MyClass &&) -> MyClass & = default;
+
+  ~MyClass() = default;
 
   constexpr auto
   operator=(const uint64_t value)  //
@@ -119,12 +121,12 @@ class MyClass
   operator!=(const MyClass &comp) const  //
       -> bool
   {
-    return !(*this == comp);
+    return data_ != comp.data_;
   }
 
  private:
-  uint64_t data_ : 63;
-  uint64_t control_bits_ : 1;  // NOLINT
+  uint64_t data_ : 62;
+  uint64_t control_bits_ : 2;
 };
 
 namespace dbgroup::atomic::pmwcas

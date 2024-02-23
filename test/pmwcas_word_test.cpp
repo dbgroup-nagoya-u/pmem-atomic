@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "pmwcas/component/pmwcas_field.hpp"
+#include "pmwcas/component/pmwcas_word.hpp"
 
 #include "common.hpp"
 #include "gtest/gtest.h"
@@ -57,64 +57,58 @@ class PMwCASFieldFixture : public ::testing::Test
   void
   VerifyConstructor(const bool is_pmwcas_desc)
   {
-    auto target_word_1 = PMwCASField{data_1_, is_pmwcas_desc};
-    EXPECT_FALSE(target_word_1.IsNotPersisted());
+    auto target_word_1 = PMwCASWord{data_1_, is_pmwcas_desc};
 
     if (is_pmwcas_desc) {
-      if constexpr (kUseDirtyFlag) {
-        EXPECT_FALSE(target_word_1.IsPMwCASDescriptor());
-        auto dirty_word = target_word_1;
-        dirty_word.SetDirtyFlag(true);
-        EXPECT_TRUE(dirty_word.IsPMwCASDescriptor());
-      } else {
-        EXPECT_TRUE(target_word_1.IsPMwCASDescriptor());
-      }
+      EXPECT_TRUE(target_word_1.IsIntermediate());
     } else {
-      EXPECT_FALSE(target_word_1.IsPMwCASDescriptor());
-      if constexpr (kUseDirtyFlag) {
-        auto dirty_word = target_word_1;
-        dirty_word.SetDirtyFlag(true);
-        EXPECT_TRUE(dirty_word.IsNotPersisted());
-        auto persisted_word = dirty_word;
-        persisted_word.SetDirtyFlag(false);
-        EXPECT_FALSE(persisted_word.IsNotPersisted());
-        EXPECT_EQ(target_word_1, persisted_word);
-      }
+      EXPECT_FALSE(target_word_1.IsIntermediate());
+      EXPECT_EQ(data_1_, target_word_1.GetTargetData<Target>());
     }
-    EXPECT_EQ(data_1_, target_word_1.GetTargetData<Target>());
+
+    EXPECT_FALSE(target_word_1.IsNotPersisted());
+    if constexpr (kUseDirtyFlag) {
+      auto dirty_word = target_word_1;
+      dirty_word.SetDirtyFlag();
+      EXPECT_TRUE(dirty_word.IsNotPersisted());
+      auto persisted_word = dirty_word;
+      persisted_word.ClearDirtyFlag();
+      EXPECT_FALSE(persisted_word.IsNotPersisted());
+      EXPECT_EQ(target_word_1, persisted_word);
+    }
   }
 
   void
   VerifyEQ()
   {
-    PMwCASField field_a{data_1_, false};
-    PMwCASField field_b{data_1_, false};
+    PMwCASWord field_a{data_1_, false};
+    PMwCASWord field_b{data_1_, false};
     EXPECT_TRUE(field_a == field_b);
 
     if constexpr (kUseDirtyFlag) {
-      field_b = PMwCASField{data_2_, false};
+      field_b = PMwCASWord{data_2_, false};
       EXPECT_FALSE(field_a == field_b);
 
       field_a = field_b;
-      field_a.SetDirtyFlag(true);
+      field_a.SetDirtyFlag();
       EXPECT_FALSE(field_a == field_b);
 
-      field_b = PMwCASField{data_2_, true};
+      field_b = PMwCASWord{data_2_, true};
       EXPECT_FALSE(field_a == field_b);
 
-      field_a.SetDirtyFlag(false);
+      field_a.ClearDirtyFlag();
       EXPECT_FALSE(field_a == field_b);
 
-      field_b = PMwCASField{data_2_, false};
+      field_b = PMwCASWord{data_2_, false};
       EXPECT_TRUE(field_a == field_b);
     } else {
-      field_b = PMwCASField{data_2_, false};
+      field_b = PMwCASWord{data_2_, false};
       EXPECT_FALSE(field_a == field_b);
 
-      field_a = PMwCASField{data_2_, true};
+      field_a = PMwCASWord{data_2_, true};
       EXPECT_FALSE(field_a == field_b);
 
-      field_b = PMwCASField{data_2_, true};
+      field_b = PMwCASWord{data_2_, true};
       EXPECT_TRUE(field_a == field_b);
     }
   }
@@ -122,34 +116,34 @@ class PMwCASFieldFixture : public ::testing::Test
   void
   VerifyNE()
   {
-    PMwCASField field_a{data_1_, false};
-    PMwCASField field_b{data_1_, false};
+    PMwCASWord field_a{data_1_, false};
+    PMwCASWord field_b{data_1_, false};
     EXPECT_FALSE(field_a != field_b);
 
     if constexpr (kUseDirtyFlag) {
-      field_b = PMwCASField{data_2_, false};
+      field_b = PMwCASWord{data_2_, false};
       EXPECT_TRUE(field_a != field_b);
 
       field_a = field_b;
-      field_a.SetDirtyFlag(true);
+      field_a.SetDirtyFlag();
       EXPECT_TRUE(field_a != field_b);
 
-      field_b = PMwCASField{data_2_, true};
+      field_b = PMwCASWord{data_2_, true};
       EXPECT_TRUE(field_a != field_b);
 
-      field_a.SetDirtyFlag(false);
+      field_a.ClearDirtyFlag();
       EXPECT_TRUE(field_a != field_b);
 
-      field_b = PMwCASField{data_2_, false};
+      field_b = PMwCASWord{data_2_, false};
       EXPECT_FALSE(field_a != field_b);
     } else {
-      field_b = PMwCASField{data_2_, false};
+      field_b = PMwCASWord{data_2_, false};
       EXPECT_TRUE(field_a != field_b);
 
-      field_a = PMwCASField{data_2_, true};
+      field_a = PMwCASWord{data_2_, true};
       EXPECT_TRUE(field_a != field_b);
 
-      field_b = PMwCASField{data_2_, true};
+      field_b = PMwCASWord{data_2_, true};
       EXPECT_FALSE(field_a != field_b);
     }
   }

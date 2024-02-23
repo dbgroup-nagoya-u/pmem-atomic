@@ -74,7 +74,7 @@ class PMwCASTargetFixture : public ::testing::Test
     pmemobj_persist(pop_, target_, sizeof(Target));
 
     pmwcas_target_ = PMwCASTarget{target_, old_val_, new_val_, std::memory_order_relaxed};
-    desc_ = PMwCASField{0UL, true};
+    desc_ = PMwCASWord{0UL, true};
   }
 
   void
@@ -107,14 +107,14 @@ class PMwCASTargetFixture : public ::testing::Test
 
     const bool result = pmwcas_target_.EmbedDescriptor(desc_);
 
+    PMwCASWord word;
+    memcpy(static_cast<void *>(&word), target_, kWordSize);
     if (expect_fail) {
       EXPECT_FALSE(result);
-      EXPECT_NE(CASTargetConverter<PMwCASField>{desc_}.converted_data,  // NOLINT
-                CASTargetConverter<Target>{*target_}.converted_data);   // NOLINT
+      EXPECT_NE(desc_, word);
     } else {
       EXPECT_TRUE(result);
-      EXPECT_EQ(CASTargetConverter<PMwCASField>{desc_}.converted_data,  // NOLINT
-                CASTargetConverter<Target>{*target_}.converted_data);   // NOLINT
+      EXPECT_EQ(desc_, word);
     }
   }
 
@@ -156,7 +156,7 @@ class PMwCASTargetFixture : public ::testing::Test
   Target *target_{nullptr};
 
   PMwCASTarget pmwcas_target_{};
-  PMwCASField desc_{};
+  PMwCASWord desc_{};
 
   Target old_val_{};
   Target new_val_{};

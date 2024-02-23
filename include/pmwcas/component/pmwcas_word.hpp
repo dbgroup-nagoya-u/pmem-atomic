@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef PMWCAS_COMPONENT_PMWCAS_FIELD_HPP
-#define PMWCAS_COMPONENT_PMWCAS_FIELD_HPP
+#ifndef PMWCAS_COMPONENT_PMWCAS_WORD_HPP
+#define PMWCAS_COMPONENT_PMWCAS_WORD_HPP
 
 // C++ standard libraries
 #include <atomic>
@@ -30,7 +30,7 @@ namespace dbgroup::atomic::pmwcas::component
  * @brief A class that represents a PMwCAS target field.
  *
  */
-class PMwCASField
+class PMwCASWord
 {
  public:
   /*####################################################################################
@@ -41,11 +41,7 @@ class PMwCASField
    * @brief Construct an empty field for PMwCAS.
    *
    */
-#ifdef PMWCAS_USE_DIRTY_FLAG
-  constexpr PMwCASField() : target_bit_arr_{}, pmwcas_flag_{0}, dirty_flag_{0} {}
-#else
-  constexpr PMwCASField() : target_bit_arr_{}, pmwcas_flag_{0} {}
-#endif
+  constexpr PMwCASWord() = default;
 
   /**
    * @brief Construct a PMwCAS field with given data.
@@ -53,19 +49,11 @@ class PMwCASField
    * @tparam T A target class to be embedded.
    * @param target_data Target data to be embedded.
    * @param is_pmwcas_descriptor A flag to indicate this field contains a descriptor.
-   * @param is_not_persisted A flag to indicate this field is not persisted.
    */
   template <class T>
-  explicit constexpr PMwCASField(  //
+  constexpr explicit PMwCASWord(  //
       T target_data,
       bool is_pmwcas_descriptor = false)
-      : target_bit_arr_{ConvertToUint64(target_data)},
-#ifdef PMWCAS_USE_DIRTY_FLAG
-        pmwcas_flag_{static_cast<uint64_t>(is_pmwcas_descriptor)},
-        dirty_flag_{0}
-#else
-        pmwcas_flag_{static_cast<uint64_t>(is_pmwcas_descriptor)}
-#endif
   {
     // static check to validate PMwCAS targets
     static_assert(sizeof(T) == kWordSize);  // NOLINT
@@ -75,39 +63,43 @@ class PMwCASField
     static_assert(std::is_copy_assignable_v<T>);
     static_assert(std::is_move_assignable_v<T>);
     static_assert(CanPMwCAS<T>());
+
+    memcpy(&word_, &target_data, kWordSize);
+    word_ |= static_cast<uint64_t>(is_pmwcas_descriptor) << kPMwCASFlagPos;
   }
 
-  constexpr PMwCASField(const PMwCASField &) = default;
-  constexpr PMwCASField(PMwCASField &&) = default;
-  constexpr auto operator=(const PMwCASField &obj) -> PMwCASField & = default;
-  constexpr auto operator=(PMwCASField &&) -> PMwCASField & = default;
+  constexpr PMwCASWord(const PMwCASWord &) = default;
+  constexpr PMwCASWord(PMwCASWord &&) = default;
+
+  constexpr auto operator=(const PMwCASWord &obj) -> PMwCASWord & = default;
+  constexpr auto operator=(PMwCASWord &&) -> PMwCASWord & = default;
 
   /*####################################################################################
    * Public destructor
    *##################################################################################*/
 
   /**
-   * @brief Destroy the PMwCASField object.
+   * @brief Destroy the PMwCASWord object.
    *
    */
-  ~PMwCASField() = default;
+  ~PMwCASWord() = default;
 
   /*####################################################################################
    * Public operators
    *##################################################################################*/
 
   auto
-  operator==(const PMwCASField &obj) const  //
+  operator==(const PMwCASWord &obj) const  //
       -> bool
   {
-    return memcmp(this, &obj, sizeof(PMwCASField)) == 0;
+    return word_ == obj.word_;
   }
 
   auto
-  operator!=(const PMwCASField &obj) const  //
+  operator!=(const PMwCASWord &obj) const  //
       -> bool
   {
-    return memcmp(this, &obj, sizeof(PMwCASField)) != 0;
+    return word_ != obj.word_;
   }
 
   /*####################################################################################
@@ -115,37 +107,37 @@ class PMwCASField
    *##################################################################################*/
 
   /**
+   * @retval true if this field contains an intermediate state.
+   * @retval false otherwise.
+   */
+  [[nodiscard]] constexpr auto
+  IsIntermediate() const  //
+      -> bool
+  {
+    if constexpr (kUseDirtyFlag) {
+      return word_ & (kPMwCASFlag | kDirtyFlag);
+    } else {
+      return word_ & kPMwCASFlag;
+    }
+  }
+
+  /**
    * @retval true if this field may not be persisted.
    * @retval false otherwise.
    */
   [[nodiscard]] constexpr auto
-  IsNotPersisted() const  // NOLINT
+  IsNotPersisted() const  //
       -> bool
   {
-#ifdef PMWCAS_USE_DIRTY_FLAG
-    return dirty_flag_;
-#else
-    return false;
-#endif
+    if constexpr (kUseDirtyFlag) {
+      return word_ & kDirtyFlag;
+    } else {
+      return false;
+    }
   }
 
   /**
-   * @retval true if this field contains a descriptor.
-   * @retval false otherwise.
-   */
-  [[nodiscard]] constexpr auto
-  IsPMwCASDescriptor() const  //
-      -> bool
-  {
-#ifdef PMWCAS_USE_DIRTY_FLAG
-    return pmwcas_flag_ && dirty_flag_;
-#else
-    return pmwcas_flag_;
-#endif
-  }
-
-  /**
-   * @tparam T an expected class of data.
+   * @tparam T An expected class of data.
    * @return Data stored in this field.
    */
   template <class T>
@@ -154,78 +146,64 @@ class PMwCASField
       -> T
   {
     if constexpr (std::is_same_v<T, uint64_t>) {
-      return target_bit_arr_;
+      return word_;
     } else if constexpr (std::is_pointer_v<T>) {
-      return reinterpret_cast<T>(target_bit_arr_);  // NOLINT
+      return reinterpret_cast<T>(word_);
     } else {
-      return CASTargetConverter<T>{target_bit_arr_}.target_data;  // NOLINT
+      T data;
+      memcpy(static_cast<void *>(&data), this, kWordSize);
+      return data;
     }
   }
 
   /**
-   * @brief Set or remove the dirty flag.
+   * @brief Set a dirty flag.
    *
-   * @param is_dirty A flag for whether to set the dirty bit.
    */
   void
-  SetDirtyFlag([[maybe_unused]] bool is_dirty)
+  SetDirtyFlag()
   {
-#ifdef PMWCAS_USE_DIRTY_FLAG
-    dirty_flag_ = is_dirty;
-#endif
+    word_ |= kDirtyFlag;
+  }
+
+  /**
+   * @brief Clear a dirty flag.
+   *
+   */
+  void
+  ClearDirtyFlag()
+  {
+    word_ &= ~kDirtyFlag;
   }
 
  private:
   /*####################################################################################
-   * Internal utility functions
+   * Internal constants
    *##################################################################################*/
 
-  /**
-   * @brief Conver given data into uint64_t.
-   *
-   * @tparam T A class of given data.
-   * @param data Data to be converted.
-   * @return Data converted to uint64_t.
-   */
-  template <class T>
-  constexpr auto
-  ConvertToUint64(const T data)  //
-      -> uint64_t
-  {
-    if constexpr (std::is_same_v<T, uint64_t>) {
-      return data;
-    } else if constexpr (std::is_pointer_v<T>) {
-      return reinterpret_cast<uint64_t>(data);  // NOLINT
-    } else {
-      return CASTargetConverter<T>{data}.converted_data;  // NOLINT
-    }
-  }
+  /// @brief The position of a PMwCAS descriptor flag.
+  static constexpr size_t kPMwCASFlagPos = 63;
+
+  /// @brief The position of a dirty flag.
+  static constexpr size_t kDirtyFlagPos = 62;
+
+  /// @brief A PMwCAS descriptor flag.
+  static constexpr uint64_t kPMwCASFlag = 1UL << kPMwCASFlagPos;
+
+  /// @brief A dirty flag.
+  static constexpr uint64_t kDirtyFlag = 1UL << kDirtyFlagPos;
 
   /*####################################################################################
    * Internal member variables
    *##################################################################################*/
 
-#ifdef PMWCAS_USE_DIRTY_FLAG
   /// @brief An actual target data.
-  uint64_t target_bit_arr_ : 62;
-
-  /// @brief Representing whether this field contains a PMwCAS descriptor.
-  uint64_t pmwcas_flag_ : 1;
-
-  /// @brief A flag for indicating this field may not be persisted.
-  uint64_t dirty_flag_ : 1;
-#else
-  /// @brief An actual target data.
-  uint64_t target_bit_arr_ : 63;
-
-  /// @brief Representing whether this field contains a PMwCAS descriptor.
-  uint64_t pmwcas_flag_ : 1;
-#endif
+  uint64_t word_{};
 };
 
 // CAS target words must be one word
-static_assert(sizeof(PMwCASField) == kWordSize);
+static_assert(sizeof(PMwCASWord) == kWordSize);
 
 }  // namespace dbgroup::atomic::pmwcas::component
 
-#endif  // PMWCAS_COMPONENT_PMWCAS_FIELD_HPP
+#endif  // PMWCAS_COMPONENT_PMWCAS_WORD_HPP

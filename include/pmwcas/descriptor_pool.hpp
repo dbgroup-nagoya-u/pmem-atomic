@@ -98,6 +98,7 @@ class DescriptorPool
 
   DescriptorPool(const DescriptorPool &) = delete;
   DescriptorPool(DescriptorPool &&) = delete;
+
   auto operator=(const DescriptorPool &) -> DescriptorPool & = delete;
   auto operator=(DescriptorPool &&) -> DescriptorPool & = delete;
 

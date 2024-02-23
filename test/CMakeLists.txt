@@ -65,7 +65,7 @@ function(ADD_PMWCAS_TEST PMWCAS_TEST_TARGET)
 endfunction()
 
 # add unit tests to build targets
-ADD_PMWCAS_TEST("pmwcas_field_test")
+ADD_PMWCAS_TEST("pmwcas_word_test")
 ADD_PMWCAS_TEST("pmwcas_target_test")
 ADD_PMWCAS_TEST("pmwcas_descriptor_test")
 ADD_PMWCAS_TEST("descriptor_pool_test")
