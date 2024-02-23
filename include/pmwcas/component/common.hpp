@@ -47,6 +47,9 @@ enum DescStatus {
   kSucceeded,
 };
 
+/// @brief An alias of std::memory_order_relaxed.
+constexpr std::memory_order kMORelax = std::memory_order_relaxed;
+
 }  // namespace dbgroup::atomic::pmwcas::component
 
 #endif  // PMWCAS_COMPONENT_COMMON_HPP

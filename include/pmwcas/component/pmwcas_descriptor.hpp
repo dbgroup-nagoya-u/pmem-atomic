@@ -177,15 +177,10 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
     // complete PMwCAS
     if (embedded_count < target_count_) {
       // MwCAS failed, so revert changes
-      if (embedded_count > 0) {
-        size_t i = 0;
-        do {
-          targets_[i].Undo();
-        } while (++i < embedded_count);
-        if constexpr (!kUseDirtyFlag) {
-          pmem_drain();
-        }
+      for (size_t i = 0; i < embedded_count; ++i) {
+        targets_[i].Undo();
       }
+      pmem_drain();
 
       // reset the descriptor
       status_ = DescStatus::kFinished;
@@ -198,16 +193,14 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
       targets_[i].Flush();
     }
     status_ = DescStatus::kSucceeded;
-    pmem_flush(&status_, kStatusSize);
+    pmem_flush(this, kHeaderSize);
     pmem_drain();
 
     // update the target address with the desired values
     for (size_t i = 0; i < target_count_; ++i) {
       targets_[i].Redo();
     }
-    if constexpr (!kUseDirtyFlag) {
-      pmem_drain();
-    }
+    pmem_drain();
 
     // reset the descriptor
     status_ = DescStatus::kFinished;
@@ -235,7 +228,8 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
 
     // change status and persist descriptor
     status_ = DescStatus::kFinished;
-    pmem_persist(&status_, kStatusSize);
+    target_count_ = 0;
+    pmem_persist(this, kHeaderSize);
   }
 
  private:
@@ -244,7 +238,7 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
    *##################################################################################*/
 
   /// @brief The size of PMwCAS progress states in bytes.
-  static constexpr size_t kStatusSize = 1;
+  static constexpr size_t kHeaderSize = 2 * kWordSize;
 
   /// @brief A flag to indicate the PMwCAS descriptor.
   static constexpr bool kIsDescriptor = true;
