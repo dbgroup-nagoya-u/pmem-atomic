@@ -77,11 +77,7 @@ constexpr auto
 CanPMwCAS()  //
     -> bool
 {
-  if constexpr (std::is_same_v<T, uint64_t> || std::is_pointer_v<T>) {
-    return true;
-  } else {
-    return false;
-  }
+  return std::is_same_v<T, uint64_t> || std::is_pointer_v<T>;
 }
 
 }  // namespace dbgroup::atomic::pmwcas

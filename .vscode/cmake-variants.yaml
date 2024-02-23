@@ -7,7 +7,6 @@ buildType:
       long: Include debugging information without optimizations
       buildType: Debug
       settings:
-        CMAKE_CXX_CLANG_TIDY: "clang-tidy"
         PMWCAS_USE_DIRTY_FLAG: OFF
         PMWCAS_CAPACITY: 6
         PMWCAS_BUILD_TESTS: ON
@@ -19,7 +18,6 @@ buildType:
       long: Perform optimizations and include debugging informatin
       buildType: RelWithDebInfo
       settings:
-        CMAKE_CXX_CLANG_TIDY: "clang-tidy"
         PMWCAS_USE_DIRTY_FLAG: OFF
         PMWCAS_CAPACITY: 6
         PMWCAS_BUILD_TESTS: ON
@@ -31,7 +29,6 @@ buildType:
       long: Perform optimizations and omit debugging informatin
       buildType: Release
       settings:
-        CMAKE_CXX_CLANG_TIDY: "clang-tidy"
         PMWCAS_USE_DIRTY_FLAG: OFF
         PMWCAS_CAPACITY: 6
         PMWCAS_BUILD_TESTS: ON
