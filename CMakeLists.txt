@@ -8,7 +8,7 @@ endif()
 # project information
 project(
   pmem_atomic
-  VERSION "0.1.0"
+  VERSION "1.0.0"
   DESCRIPTION "A utility library for atomic operations in persistent memory."
   LANGUAGES "CXX"
 )
