@@ -1,20 +1,21 @@
-name: Ubuntu-20.04
+name: Unit Tests
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
+  workflow_call:
+    inputs:
+      os:
+        required: true
+        type: string
 
 env:
   BUILD_TYPE: Release
 
 jobs:
   unit_test:
-    runs-on: ubuntu-20.04
+    runs-on: ${{ inputs.os }}
     timeout-minutes: 10
-    steps:
 
+    steps:
     - name: Clone Main Repository
       uses: actions/checkout@v4
 

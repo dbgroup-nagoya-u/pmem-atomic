@@ -1,6 +1,6 @@
 # Persistent Memory Atomic Utility
 
-[![Ubuntu-20.04](https://github.com/dbgroup-nagoya-u/pmwcas/actions/workflows/unit_tests.yaml/badge.svg)](https://github.com/dbgroup-nagoya-u/pmwcas/actions/workflows/unit_tests.yaml)
+[![Ubuntu 22.04](https://github.com/dbgroup-nagoya-u/pmem-atomic/actions/workflows/ubuntu_22.yaml/badge.svg)](https://github.com/dbgroup-nagoya-u/pmem-atomic/actions/workflows/ubuntu_22.yaml) [![Ubuntu 20.04](https://github.com/dbgroup-nagoya-u/pmem-atomic/actions/workflows/ubuntu_20.yaml/badge.svg)](https://github.com/dbgroup-nagoya-u/pmem-atomic/actions/workflows/ubuntu_20.yaml)
 
 This repository is an open source implementation of persistent compare-and-swap (PCAS) and persistent multi-word CAS (PMwCAS) operations for research use. For more information, please refer to the following paper.
 
