@@ -15,7 +15,7 @@
  */
 
 // the corresponding header
-#include "pmwcas/pmwcas_descriptor.hpp"
+#include "pmwcas/atomic.hpp"
 
 // C++ standard libraries
 #include <atomic>
@@ -25,8 +25,6 @@
 #include <cstdint>
 #include <filesystem>
 #include <mutex>
-#include <random>
-#include <stdexcept>
 #include <thread>
 #include <vector>
 
@@ -37,9 +35,6 @@
 // external libraries
 #include "gtest/gtest.h"
 
-// library headers
-#include "pmwcas/atomic.hpp"
-
 // local sources
 #include "common.hpp"
 
@@ -48,7 +43,7 @@ namespace dbgroup::pmem::atomic::test
 // prepare a temporary directory
 auto *const env = testing::AddGlobalTestEnvironment(new TmpDirManager);
 
-class PMwCASDescriptorFixture : public ::testing::Test
+class PmemAtomicFixture : public ::testing::Test
 {
  protected:
   /*############################################################################
@@ -61,9 +56,8 @@ class PMwCASDescriptorFixture : public ::testing::Test
    * Constants
    *##########################################################################*/
 
-  static constexpr char kPoolName[] = "pmem_atomic_pmwcas_descriptor_test";
-  static constexpr char kLayout[] = "pmem_atomic_pmwcas_descriptor_test";
-  static constexpr size_t kTargetFieldNum = kPMwCASCapacity * kTestThreadNum;
+  static constexpr char kPoolName[] = "pmem_atomic_atomic_test";
+  static constexpr char kLayout[] = "pmem_atomic_atomic_test";
 
   /*############################################################################
    * Setup/Teardown
@@ -72,9 +66,7 @@ class PMwCASDescriptorFixture : public ::testing::Test
   void
   SetUp() override
   {
-    constexpr size_t kArraySize = kWordSize * kTargetFieldNum;
-    constexpr size_t kDescPoolSize = kTestThreadNum * sizeof(PMwCASDescriptor);
-    constexpr size_t kPoolSize = PMEMOBJ_MIN_POOL + kArraySize + kDescPoolSize;
+    constexpr size_t kPoolSize = PMEMOBJ_MIN_POOL;
 
     test_ready_ = false;
     ready_num_ = 0;
@@ -89,12 +81,10 @@ class PMwCASDescriptorFixture : public ::testing::Test
     }
 
     // initialize target fields
-    auto &&root = pmemobj_root(pop_, kArraySize);
-    target_fields_ = reinterpret_cast<Target *>(pmemobj_direct(root));
-    for (size_t i = 0; i < kTargetFieldNum; ++i) {
-      target_fields_[i] = 0UL;
-    }
-    pmem_persist(target_fields_, kArraySize);
+    auto &&root = pmemobj_root(pop_, kWordSize);
+    target_ = reinterpret_cast<Target *>(pmemobj_direct(root));
+    *target_ = 0UL;
+    pmem_persist(target_, kWordSize);
   }
 
   void
@@ -110,14 +100,13 @@ class PMwCASDescriptorFixture : public ::testing::Test
    *##########################################################################*/
 
   void
-  VerifyPMwCAS(  //
+  VerifyPCAS(  //
       const size_t thread_num)
   {
     // run a function over multi-threads
     std::vector<std::thread> threads{};
-    std::mt19937_64 rand_engine(kRandomSeed);
     for (size_t i = 0; i < thread_num; ++i) {
-      threads.emplace_back(&PMwCASDescriptorFixture::PMwCASRandomly, this, rand_engine());
+      threads.emplace_back(&PmemAtomicFixture::PCASRandomly, this);
     }
 
     {  // wait for all workers to finish initialization
@@ -133,11 +122,8 @@ class PMwCASDescriptorFixture : public ::testing::Test
     }
 
     // check the total number of modifications
-    size_t sum = 0;
-    for (size_t i = 0; i < kTargetFieldNum; ++i) {
-      sum += target_fields_[i];
-    }
-    EXPECT_EQ(kExecNum * thread_num * kPMwCASCapacity, sum);
+    size_t sum = *target_;
+    EXPECT_EQ(kExecNum * thread_num, sum);
   }
 
  private:
@@ -146,53 +132,20 @@ class PMwCASDescriptorFixture : public ::testing::Test
    *##########################################################################*/
 
   void
-  PMwCASRandomly(  //
-      const size_t rand_seed)
+  PCASRandomly()
   {
-    // prepare target indices
-    std::mt19937_64 rand_engine{rand_seed};
-    std::vector<std::vector<size_t>> operations;
-    operations.reserve(kExecNum);
-    for (size_t i = 0; i < kExecNum; ++i) {
-      std::vector<size_t> targets;
-      targets.reserve(kPMwCASCapacity);
-      while (targets.size() < kPMwCASCapacity) {
-        size_t idx = id_dist_(rand_engine);
-        const auto iter = std::find(targets.begin(), targets.end(), idx);
-        if (iter == targets.end()) {
-          targets.emplace_back(idx);
-        }
-      }
-      std::sort(targets.begin(), targets.end());
-      operations.emplace_back(std::move(targets));
-    }
-
     {  // wait for a main thread to release a lock
       std::unique_lock lock{mtx_};
       ++ready_num_;
       cond_.wait(lock, [this] { return test_ready_; });
     }
 
-    // prepare descriptor
-    PMEMoid oid{OID_NULL};
-    if (pmemobj_zalloc(pop_, &oid, sizeof(PMwCASDescriptor), 0) != 0) {
-      throw std::runtime_error{pmemobj_errormsg()};
-    }
-    auto *desc = reinterpret_cast<PMwCASDescriptor *>(pmemobj_direct(oid));
-    desc->Initialize();
-
-    // run PMwCAS
-    for (auto &&targets : operations) {
-      while (true) {
-        for (auto &&idx : targets) {
-          auto *addr = &(target_fields_[idx]);
-          const auto cur_val = PLoad(addr);
-          desc->Add(addr, cur_val, cur_val + 1);
-        }
-        if (desc->PMwCAS()) break;
+    for (size_t i = 0; i < kExecNum; ++i) {
+      auto cur_val = PLoad(target_);
+      while (!PCAS(target_, cur_val, cur_val + 1)) {
+        // continue until PCAS succeeds
       }
     }
-    pmemobj_free(&oid);
   }
 
   /*############################################################################
@@ -201,9 +154,7 @@ class PMwCASDescriptorFixture : public ::testing::Test
 
   PMEMobjpool *pop_{nullptr};
 
-  Target *target_fields_{nullptr};
-
-  std::uniform_int_distribution<size_t> id_dist_{0, kPMwCASCapacity - 1};
+  Target *target_{nullptr};
 
   std::atomic_size_t ready_num_{0};
 
@@ -218,14 +169,14 @@ class PMwCASDescriptorFixture : public ::testing::Test
  * Unit test definitions
  *############################################################################*/
 
-TEST_F(PMwCASDescriptorFixture, PMwCASWithSingleThreadCorrectlyIncrementTargets)
+TEST_F(PmemAtomicFixture, PCASWithSingleThreadCorrectlyIncrementTargets)
 {  //
-  VerifyPMwCAS(1);
+  VerifyPCAS(1);
 }
 
-TEST_F(PMwCASDescriptorFixture, PMwCASWithMultiThreadsCorrectlyIncrementTargets)
+TEST_F(PmemAtomicFixture, PCASWithMultiThreadsCorrectlyIncrementTargets)
 {
-  VerifyPMwCAS(kTestThreadNum);
+  VerifyPCAS(kTestThreadNum);
 }
 
 }  // namespace dbgroup::pmem::atomic::test

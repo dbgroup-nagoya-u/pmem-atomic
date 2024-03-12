@@ -17,8 +17,22 @@
 // the corresponding header
 #include "pmwcas/component/pmwcas_target.hpp"
 
+// C++ standard libraries
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <filesystem>
+#include <stdexcept>
+#include <type_traits>
+
+// external system libraries
+#include <libpmemobj.h>
+
 // external libraries
 #include "gtest/gtest.h"
+
+// library headers
+#include "pmwcas/component/common.hpp"
 
 // local sources
 #include "common.hpp"
@@ -28,18 +42,17 @@ namespace dbgroup::pmem::atomic::component::test
 // prepare a temporary directory
 auto *const env = testing::AddGlobalTestEnvironment(new TmpDirManager);
 
-/*##############################################################################
- * Global constants
- *############################################################################*/
-
-constexpr const char *kPoolName = "pmwcas_pmwcas_target_test";
-constexpr const char *kLayout = "target";
-constexpr auto kModeRW = S_IRUSR | S_IWUSR;  // NOLINT
-
 template <class Target>
 class PMwCASTargetFixture : public ::testing::Test
 {
  protected:
+  /*############################################################################
+   * Constants
+   *##########################################################################*/
+
+  static constexpr char kPoolName[] = "pmem_atomic_pmwcas_target_test";
+  static constexpr char kLayout[] = "pmem_atomic_pmwcas_target_test";
+
   /*############################################################################
    * Setup/Teardown
    *##########################################################################*/
@@ -67,8 +80,7 @@ class PMwCASTargetFixture : public ::testing::Test
       pop_ = pmemobj_create(pool_path.c_str(), kLayout, kPoolSize, kModeRW);
     }
     if (pmemobj_zalloc(pop_, &oid_, sizeof(Target), 0) != 0) {
-      std::cerr << pmemobj_errormsg() << std::endl;
-      throw std::exception{};
+      throw std::runtime_error{pmemobj_errormsg()};
     }
 
     // prepare initial state
@@ -76,7 +88,7 @@ class PMwCASTargetFixture : public ::testing::Test
     *target_ = old_val_;
     pmemobj_persist(pop_, target_, sizeof(Target));
 
-    pmwcas_target_ = PMwCASTarget{target_, old_val_, new_val_, std::memory_order_relaxed};
+    pmwcas_target_ = PMwCASTarget{target_, old_val_, new_val_, kMORelax};
     desc_ = kPMwCASFlag;
   }
 
@@ -102,7 +114,8 @@ class PMwCASTargetFixture : public ::testing::Test
    *##########################################################################*/
 
   void
-  VerifyEmbedDescriptor(const bool expect_fail)
+  VerifyEmbedDescriptor(  //
+      const bool expect_fail)
   {
     if (expect_fail) {
       *target_ = new_val_;
@@ -111,7 +124,7 @@ class PMwCASTargetFixture : public ::testing::Test
     const bool result = pmwcas_target_.EmbedDescriptor(desc_);
 
     uint64_t word;
-    memcpy(static_cast<void *>(&word), target_, kWordSize);
+    std::memcpy(static_cast<void *>(&word), target_, kWordSize);
     if (expect_fail) {
       EXPECT_FALSE(result);
       EXPECT_NE(desc_, word);
@@ -122,7 +135,8 @@ class PMwCASTargetFixture : public ::testing::Test
   }
 
   void
-  VerifyCompletePMwCAS(const bool succeeded)
+  VerifyCompletePMwCAS(  //
+      const bool succeeded)
   {
     ASSERT_TRUE(pmwcas_target_.EmbedDescriptor(desc_));
 
@@ -136,7 +150,8 @@ class PMwCASTargetFixture : public ::testing::Test
   }
 
   void
-  VerifyRecoverPMwCAS(const bool succeeded)
+  VerifyRecoverPMwCAS(  //
+      const bool succeeded)
   {
     ASSERT_TRUE(pmwcas_target_.EmbedDescriptor(desc_));
 
@@ -155,13 +170,17 @@ class PMwCASTargetFixture : public ::testing::Test
    *##########################################################################*/
 
   PMEMobjpool *pop_{nullptr};
+
   PMEMoid oid_{OID_NULL};
+
   Target *target_{nullptr};
 
   PMwCASTarget pmwcas_target_{};
+
   uint64_t desc_{};
 
   Target old_val_{};
+
   Target new_val_{};
 };
 

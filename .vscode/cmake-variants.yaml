@@ -11,6 +11,7 @@ buildType:
         PMWCAS_BUILD_TESTS: ON
         DBGROUP_TEST_THREAD_NUM: 8
         DBGROUP_TEST_EXEC_NUM: "5E4"
+        DBGROUP_TEST_RANDOM_SEED: 0
         DBGROUP_TEST_TMP_PMEM_PATH: "/pmem_tmp"
     relWithDebInfo:
       short: RelWithDebInfo
@@ -21,6 +22,7 @@ buildType:
         PMWCAS_BUILD_TESTS: ON
         DBGROUP_TEST_THREAD_NUM: 8
         DBGROUP_TEST_EXEC_NUM: "1E5"
+        DBGROUP_TEST_RANDOM_SEED: 0
         DBGROUP_TEST_TMP_PMEM_PATH: "/pmem_tmp"
     release:
       short: Release
@@ -31,4 +33,5 @@ buildType:
         PMWCAS_BUILD_TESTS: ON
         DBGROUP_TEST_THREAD_NUM: 8
         DBGROUP_TEST_EXEC_NUM: "1E5"
+        DBGROUP_TEST_RANDOM_SEED: 0
         DBGROUP_TEST_TMP_PMEM_PATH: "/pmem_tmp"

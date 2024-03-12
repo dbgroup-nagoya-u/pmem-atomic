@@ -14,16 +14,22 @@
  * limitations under the License.
  */
 
+// the corresponding header
 #include "pmwcas/descriptor_pool.hpp"
 
 // C++ standard libraries
+#include <atomic>
 #include <chrono>
+#include <condition_variable>
+#include <cstddef>
 #include <future>
 #include <iterator>
-#include <shared_mutex>
-#include <string>
+#include <memory>
+#include <mutex>
 #include <thread>
 #include <unordered_set>
+#include <utility>
+#include <vector>
 
 // external libraries
 #include "gtest/gtest.h"
@@ -37,16 +43,16 @@ namespace dbgroup::pmem::atomic::test
 // prepare a temporary directory
 auto *const env = testing::AddGlobalTestEnvironment(new TmpDirManager);
 
-/*##############################################################################
- * Global constants
- *############################################################################*/
-
-constexpr const char *kPoolName = "pmwcas_descriptor_pool_test";
-constexpr auto kMaxThreadNum = ::dbgroup::thread::kMaxThreadNum;
-
 class DescriptorPoolFixture : public ::testing::Test
 {
  protected:
+  /*############################################################################
+   * Constants
+   *##########################################################################*/
+
+  static constexpr char kPoolName[] = "pmem_atomic_descriptor_pool_test";
+  static constexpr auto kMaxThreadNum = ::dbgroup::thread::kMaxThreadNum;
+
   /*############################################################################
    * Setup/Teardown
    *##########################################################################*/
@@ -54,10 +60,6 @@ class DescriptorPoolFixture : public ::testing::Test
   void
   SetUp() override
   {
-    if (kTmpPMEMPath.empty()) {
-      GTEST_SKIP_("The persistent memory path is not set.");
-    }
-
     auto &&pool_path = GetTmpPoolPath();
     pool_path /= kPoolName;
     pool_ = std::make_unique<DescriptorPool>(pool_path);
@@ -88,34 +90,34 @@ class DescriptorPoolFixture : public ::testing::Test
   }
 
   void
-  GetAllDescriptor(const size_t pool_size)
+  GetAllDescriptor(  //
+      const size_t pool_size)
   {
-    constexpr std::chrono::milliseconds kSleepMS{100};
+    test_ready_ = false;
+    ready_num_ = 0;
 
-    is_ready_ = false;
     std::vector<std::thread> threads{};
     std::vector<std::future<PMwCASDescriptor *>> futures{};
-
     for (size_t i = 0; i < pool_size; ++i) {
       std::promise<PMwCASDescriptor *> p{};
       futures.emplace_back(p.get_future());
       threads.emplace_back(&DescriptorPoolFixture::GetDescriptor, this, std::move(p));
     }
 
-    {
-      std::this_thread::sleep_for(kSleepMS);
-      [[maybe_unused]] std::lock_guard s_guard{s_mtx_};
+    // wait for all workers to finish initialization
+    while (ready_num_ < pool_size) {
+      std::this_thread::sleep_for(std::chrono::milliseconds{1});
     }
 
     std::promise<PMwCASDescriptor *> extra_p{};
     auto &&extra_f = extra_p.get_future();
     std::thread extra_t(&DescriptorPoolFixture::GetDescriptor, this, std::move(extra_p));
-    auto rc = extra_f.wait_for(std::chrono::milliseconds(3));
+    auto rc = extra_f.wait_for(std::chrono::milliseconds(1));
     EXPECT_EQ(rc, std::future_status::timeout);
 
     {
-      std::lock_guard x_guard{x_mtx_};
-      is_ready_ = true;
+      std::lock_guard x_guard{mtx_};
+      test_ready_ = true;
     }
     cond_.notify_all();
 
@@ -124,7 +126,6 @@ class DescriptorPoolFixture : public ::testing::Test
     for (auto &&future : futures) {
       results.emplace_back(future.get());
     }
-
     for (auto &t : threads) {
       t.join();
     }
@@ -141,15 +142,15 @@ class DescriptorPoolFixture : public ::testing::Test
    *##########################################################################*/
 
   void
-  GetDescriptor(std::promise<PMwCASDescriptor *> p)
+  GetDescriptor(  //
+      std::promise<PMwCASDescriptor *> p)
   {
-    std::shared_lock guard{s_mtx_};
     auto *desc = pool_->Get();
     p.set_value(desc);
     {
-      std::unique_lock lock{x_mtx_};
-      guard.unlock();
-      cond_.wait(lock, [this] { return is_ready_; });
+      std::unique_lock lock{mtx_};
+      ++ready_num_;
+      cond_.wait(lock, [this] { return test_ready_; });
     }
   }
 
@@ -159,13 +160,13 @@ class DescriptorPoolFixture : public ::testing::Test
 
   std::unique_ptr<DescriptorPool> pool_{nullptr};
 
-  std::mutex x_mtx_{};
+  std::atomic_size_t ready_num_{0};
 
-  std::shared_mutex s_mtx_{};
+  std::mutex mtx_{};
 
   std::condition_variable cond_{};
 
-  bool is_ready_{false};
+  bool test_ready_{false};
 };
 
 /*##############################################################################

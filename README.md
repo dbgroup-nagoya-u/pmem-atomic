@@ -33,8 +33,9 @@ cd pmwcas
 #### Parameters for Unit Testing
 
 - `PMWCAS_BUILD_TESTS`: Build unit tests if `ON` (default: `OFF`).
-- `DBGROUP_TEST_THREAD_NUM`: The number of threads to run unit tests (default: `8`).
+- `DBGROUP_TEST_THREAD_NUM`: The number of threads to run unit tests (default: `2`).
 - `DBGROUP_TEST_EXEC_NUM`: The number of operations performed per thread (default: `1E5`).
+- `DBGROUP_TEST_RANDOM_SEED`: A fixed seed value to reproduce the results of unit tests (default `0`).
 - `DBGROUP_TEST_TMP_PMEM_PATH`: The path to a persistent storage (default: `""`).
     - If the path is not set, the corresponding tests will be skipped.
 

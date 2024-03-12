@@ -18,14 +18,27 @@
 #define TEST_COMMON_HPP
 
 // C++ standard libraries
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
 #include <filesystem>
 #include <functional>
+#include <iostream>
+#include <string>
+
+// system libraries
+#include <sys/stat.h>
+#include <sys/types.h>
 
 // external libraries
 #include "gtest/gtest.h"
 
 // local sources
 #include "pmwcas/utility.hpp"
+
+/*##############################################################################
+ * Global macro
+ *############################################################################*/
 
 #define DBGROUP_ADD_QUOTES_INNER(x) #x                     // NOLINT
 #define DBGROUP_ADD_QUOTES(x) DBGROUP_ADD_QUOTES_INNER(x)  // NOLINT
@@ -38,7 +51,11 @@ constexpr size_t kTestThreadNum = DBGROUP_TEST_THREAD_NUM;
 
 constexpr size_t kExecNum = DBGROUP_TEST_EXEC_NUM;
 
+constexpr size_t kRandomSeed = DBGROUP_TEST_RANDOM_SEED;
+
 constexpr std::string_view kTmpPMEMPath = DBGROUP_ADD_QUOTES(DBGROUP_TEST_TMP_PMEM_PATH);
+
+constexpr mode_t kModeRW = S_IRUSR | S_IWUSR;
 
 const std::string_view use_name = std::getenv("USER");
 
@@ -74,7 +91,7 @@ class TmpDirManager : public ::testing::Environment
   {
     // check the specified path
     if (kTmpPMEMPath.empty() || !std::filesystem::exists(kTmpPMEMPath)) {
-      std::cerr << "WARN: The correct path to persistent memory is not set." << std::endl;
+      std::cerr << "WARN: The correct path to persistent memory is not set.\n";
       GTEST_SKIP();
     }
 

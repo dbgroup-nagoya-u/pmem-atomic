@@ -16,7 +16,7 @@ FetchContent_MakeAvailable(googletest)
 
 set(
   DBGROUP_TEST_THREAD_NUM
-  "8" CACHE STRING
+  "2" CACHE STRING
   "The number of worker threads for testing."
 )
 
@@ -24,6 +24,12 @@ set(
   DBGROUP_TEST_EXEC_NUM
   "1E5" CACHE STRING
   "The number of operations performed per thread."
+)
+
+set(
+  DBGROUP_TEST_RANDOM_SEED
+  "0" CACHE STRING
+  "A fixed seed value to reproduce unit tests."
 )
 
 set(
@@ -58,6 +64,7 @@ function(ADD_PMWCAS_TEST PMWCAS_TEST_TARGET)
   target_compile_definitions(${PMWCAS_TEST_TARGET} PRIVATE
     DBGROUP_TEST_THREAD_NUM=${DBGROUP_TEST_THREAD_NUM}
     DBGROUP_TEST_EXEC_NUM=${DBGROUP_TEST_EXEC_NUM}
+    DBGROUP_TEST_RANDOM_SEED=${DBGROUP_TEST_RANDOM_SEED}
     DBGROUP_TEST_TMP_PMEM_PATH=${DBGROUP_TEST_TMP_PMEM_PATH}
   )
 
@@ -65,6 +72,7 @@ function(ADD_PMWCAS_TEST PMWCAS_TEST_TARGET)
 endfunction()
 
 # add unit tests to build targets
+ADD_PMWCAS_TEST("atomic_test")
 ADD_PMWCAS_TEST("pmwcas_target_test")
 ADD_PMWCAS_TEST("pmwcas_descriptor_test")
 ADD_PMWCAS_TEST("descriptor_pool_test")
