@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef PMWCAS_UTILITY_HPP
-#define PMWCAS_UTILITY_HPP
+#ifndef PMEM_ATOMIC_UTILITY_HPP
+#define PMEM_ATOMIC_UTILITY_HPP
 
 // C++ standard libraries
 #include <chrono>
@@ -52,13 +52,13 @@ constexpr uint64_t kIsIntermediate = kDirtyFlag | kPMwCASFlag;
  *############################################################################*/
 
 /// @brief The maximum number of target words of PMwCAS.
-constexpr size_t kPMwCASCapacity = PMWCAS_CAPACITY;
+constexpr size_t kPMwCASCapacity = PMEM_ATOMIC_PMWCAS_CAPACITY;
 
 /// @brief The maximum number of retries for preventing busy loops.
-constexpr size_t kRetryNum = PMWCAS_SPINLOCK_RETRY_NUM;
+constexpr size_t kRetryNum = PMEM_ATOMIC_SPINLOCK_RETRY_NUM;
 
 /// @brief A back-off time for preventing busy loops [us].
-constexpr std::chrono::microseconds kBackOffTime{PMWCAS_BACKOFF_TIME};
+constexpr std::chrono::microseconds kBackOffTime{PMEM_ATOMIC_BACKOFF_TIME};
 
 /*##############################################################################
  * Global utility functions
@@ -79,4 +79,4 @@ CanPCAS()  //
 
 }  // namespace dbgroup::pmem::atomic
 
-#endif  // PMWCAS_UTILITY_HPP
+#endif  // PMEM_ATOMIC_UTILITY_HPP

@@ -15,7 +15,7 @@
  */
 
 // the corresponding header
-#include "pmwcas/descriptor_pool.hpp"
+#include "pmem/atomic/descriptor_pool.hpp"
 
 // C++ standard libraries
 #include <cstddef>
@@ -36,7 +36,7 @@
 #include "thread/id_manager.hpp"
 
 // local sources
-#include "pmwcas/pmwcas_descriptor.hpp"
+#include "pmem/atomic/pmwcas_descriptor.hpp"
 
 namespace dbgroup::pmem::atomic
 {

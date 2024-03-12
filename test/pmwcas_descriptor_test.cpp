@@ -15,7 +15,7 @@
  */
 
 // the corresponding header
-#include "pmwcas/pmwcas_descriptor.hpp"
+#include "pmem/atomic/pmwcas_descriptor.hpp"
 
 // C++ standard libraries
 #include <atomic>
@@ -38,7 +38,7 @@
 #include "gtest/gtest.h"
 
 // library headers
-#include "pmwcas/atomic.hpp"
+#include "pmem/atomic/atomic.hpp"
 
 // local sources
 #include "common.hpp"

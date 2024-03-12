@@ -15,7 +15,7 @@
  */
 
 // the corresponding header
-#include "pmwcas/pmwcas_descriptor.hpp"
+#include "pmem/atomic/pmwcas_descriptor.hpp"
 
 // C++ standard libraries
 #include <cstddef>
@@ -24,7 +24,7 @@
 #include <libpmem.h>
 
 // local sources
-#include "pmwcas/utility.hpp"
+#include "pmem/atomic/utility.hpp"
 
 namespace dbgroup::pmem::atomic
 {

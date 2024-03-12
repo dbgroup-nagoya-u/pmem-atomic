@@ -15,7 +15,7 @@
  */
 
 // the corresponding header
-#include "pmwcas/component/pmwcas_target.hpp"
+#include "pmem/atomic/component/pmwcas_target.hpp"
 
 // C++ standard libraries
 #include <atomic>
@@ -30,7 +30,7 @@
 #include "lock/common.hpp"
 
 // local sources
-#include "pmwcas/utility.hpp"
+#include "pmem/atomic/utility.hpp"
 
 namespace dbgroup::pmem::atomic::component
 {

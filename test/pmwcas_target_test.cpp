@@ -15,7 +15,7 @@
  */
 
 // the corresponding header
-#include "pmwcas/component/pmwcas_target.hpp"
+#include "pmem/atomic/component/pmwcas_target.hpp"
 
 // C++ standard libraries
 #include <cstddef>
@@ -32,7 +32,7 @@
 #include "gtest/gtest.h"
 
 // library headers
-#include "pmwcas/component/common.hpp"
+#include "pmem/atomic/component/common.hpp"
 
 // local sources
 #include "common.hpp"

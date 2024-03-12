@@ -15,7 +15,7 @@
  */
 
 // the corresponding header
-#include "pmwcas/atomic.hpp"
+#include "pmem/atomic/atomic.hpp"
 
 // C++ standard libraries
 #include <atomic>

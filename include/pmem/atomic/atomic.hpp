@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef PMWCAS_ATOMIC_HPP
-#define PMWCAS_ATOMIC_HPP
+#ifndef PMEM_ATOMIC_ATOMIC_HPP
+#define PMEM_ATOMIC_ATOMIC_HPP
 
 // C++ standard libraries
 #include <atomic>
@@ -28,7 +28,7 @@
 #include <libpmem.h>
 
 // local sources
-#include "component/common.hpp"
+#include "pmem/atomic/component/common.hpp"
 
 namespace dbgroup::pmem::atomic
 {
@@ -140,4 +140,4 @@ PCAS(  //
 
 }  // namespace dbgroup::pmem::atomic
 
-#endif  // PMWCAS_ATOMIC_HPP
+#endif  // PMEM_ATOMIC_ATOMIC_HPP

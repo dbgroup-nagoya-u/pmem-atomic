@@ -7,9 +7,9 @@ endif()
 
 # project information
 project(
-  pmwcas
+  pmem_atomic
   VERSION "0.1.0"
-  DESCRIPTION "PMwCAS library."
+  DESCRIPTION "A utility library for atomic operations in persistent memory."
   LANGUAGES "CXX"
 )
 
@@ -23,25 +23,25 @@ if(NOT TARGET dbgroup::${PROJECT_NAME})
   #----------------------------------------------------------------------------#
 
   option(
-    PMWCAS_USE_DIRTY_FLAG
+    PMEM_ATOMIC_USE_DIRTY_FLAG
     "Use dirty flags to indicate words that are not persisted."
     OFF
   )
 
   set(
-    PMWCAS_CAPACITY
+    PMEM_ATOMIC_PMWCAS_CAPACITY
     "6" CACHE STRING
     "The maximum number of target words for PMwCAS."
   )
 
   set(
-    PMWCAS_SPINLOCK_RETRY_NUM
+    PMEM_ATOMIC_SPINLOCK_RETRY_NUM
     "10" CACHE STRING
     "The maximum number of retries for preventing busy loops."
   )
 
   set(
-    PMWCAS_BACKOFF_TIME
+    PMEM_ATOMIC_BACKOFF_TIME
     "10" CACHE STRING
     "A sleep time for preventing busy loops [us]."
   )
@@ -97,10 +97,10 @@ if(NOT TARGET dbgroup::${PROJECT_NAME})
     "${LIBPMEMOBJ_INCLUDE_DIRS}"
   )
   target_compile_definitions(${PROJECT_NAME} PUBLIC
-    PMWCAS_CAPACITY=${PMWCAS_CAPACITY}
-    PMWCAS_SPINLOCK_RETRY_NUM=${PMWCAS_SPINLOCK_RETRY_NUM}
-    PMWCAS_BACKOFF_TIME=${PMWCAS_BACKOFF_TIME}
-    $<$<BOOL:${PMWCAS_USE_DIRTY_FLAG}>:PMWCAS_USE_DIRTY_FLAG>
+    PMEM_ATOMIC_PMWCAS_CAPACITY=${PMEM_ATOMIC_PMWCAS_CAPACITY}
+    PMEM_ATOMIC_SPINLOCK_RETRY_NUM=${PMEM_ATOMIC_SPINLOCK_RETRY_NUM}
+    PMEM_ATOMIC_BACKOFF_TIME=${PMEM_ATOMIC_BACKOFF_TIME}
+    $<$<BOOL:${PMEM_ATOMIC_USE_DIRTY_FLAG}>:PMEM_ATOMIC_USE_DIRTY_FLAG>
   )
   target_link_libraries(${PROJECT_NAME} PUBLIC
     Threads::Threads
@@ -108,15 +108,15 @@ if(NOT TARGET dbgroup::${PROJECT_NAME})
     ${LIBPMEMOBJ_LIBRARIES}
     dbgroup::cpp_utility
   )
-endif()
 
-#------------------------------------------------------------------------------#
-# Build Unit Tests
-#------------------------------------------------------------------------------#
+  #----------------------------------------------------------------------------#
+  # Build Unit Tests
+  #----------------------------------------------------------------------------#
 
-option(PMWCAS_BUILD_TESTS, "Build unit tests for a PMwCAS library" OFF)
-if(${PMWCAS_BUILD_TESTS})
-  enable_testing()
-  # include unit tests
-  add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/test")
+  option(PMEM_ATOMIC_BUILD_TESTS, "Build unit tests for a PMwCAS library" OFF)
+  if(${PMEM_ATOMIC_BUILD_TESTS})
+    enable_testing()
+    # include unit tests
+    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/test")
+  endif()
 endif()

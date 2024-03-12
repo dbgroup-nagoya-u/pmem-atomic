@@ -15,7 +15,7 @@
  */
 
 // the corresponding header
-#include "pmwcas/descriptor_pool.hpp"
+#include "pmem/atomic/descriptor_pool.hpp"
 
 // C++ standard libraries
 #include <atomic>

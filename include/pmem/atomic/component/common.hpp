@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef PMWCAS_COMPONENT_COMMON_HPP
-#define PMWCAS_COMPONENT_COMMON_HPP
+#ifndef PMEM_ATOMIC_COMPONENT_COMMON_HPP
+#define PMEM_ATOMIC_COMPONENT_COMMON_HPP
 
 // C++ standard libraries
 #include <atomic>
@@ -23,7 +23,7 @@
 #include <type_traits>
 
 // local sources
-#include "pmwcas/utility.hpp"
+#include "pmem/atomic/utility.hpp"
 
 namespace dbgroup::pmem::atomic::component
 {
@@ -99,4 +99,4 @@ ToUInt64(   //
 
 }  // namespace dbgroup::pmem::atomic::component
 
-#endif  // PMWCAS_COMPONENT_COMMON_HPP
+#endif  // PMEM_ATOMIC_COMPONENT_COMMON_HPP

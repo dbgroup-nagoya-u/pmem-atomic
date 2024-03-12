@@ -34,7 +34,7 @@
 #include "gtest/gtest.h"
 
 // local sources
-#include "pmwcas/utility.hpp"
+#include "pmem/atomic/utility.hpp"
 
 /*##############################################################################
  * Global macro

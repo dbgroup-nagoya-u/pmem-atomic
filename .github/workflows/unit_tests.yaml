@@ -30,7 +30,7 @@ jobs:
       run: >
         cmake ${GITHUB_WORKSPACE}
         -DCMAKE_BUILD_TYPE=${BUILD_TYPE}
-        -DPMWCAS_BUILD_TESTS=ON
+        -DPMEM_ATOMIC_BUILD_TESTS=ON
 
     - name: Build
       shell: bash
@@ -40,4 +40,4 @@ jobs:
     - name: Test
       shell: bash
       working-directory: ${{github.workspace}}/build
-      run: ctest -C ${BUILD_TYPE}
+      run: ctest -C ${BUILD_TYPE} --output-on-failure

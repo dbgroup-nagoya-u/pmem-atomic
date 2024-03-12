@@ -7,8 +7,8 @@ buildType:
       long: Include debugging information without optimizations
       buildType: Debug
       settings:
-        PMWCAS_USE_DIRTY_FLAG: OFF
-        PMWCAS_BUILD_TESTS: ON
+        PMEM_ATOMIC_USE_DIRTY_FLAG: OFF
+        PMEM_ATOMIC_BUILD_TESTS: ON
         DBGROUP_TEST_THREAD_NUM: 8
         DBGROUP_TEST_EXEC_NUM: "5E4"
         DBGROUP_TEST_RANDOM_SEED: 0
@@ -18,8 +18,8 @@ buildType:
       long: Perform optimizations and include debugging informatin
       buildType: RelWithDebInfo
       settings:
-        PMWCAS_USE_DIRTY_FLAG: OFF
-        PMWCAS_BUILD_TESTS: ON
+        PMEM_ATOMIC_USE_DIRTY_FLAG: OFF
+        PMEM_ATOMIC_BUILD_TESTS: ON
         DBGROUP_TEST_THREAD_NUM: 8
         DBGROUP_TEST_EXEC_NUM: "1E5"
         DBGROUP_TEST_RANDOM_SEED: 0
@@ -29,8 +29,8 @@ buildType:
       long: Perform optimizations and omit debugging informatin
       buildType: Release
       settings:
-        PMWCAS_USE_DIRTY_FLAG: OFF
-        PMWCAS_BUILD_TESTS: ON
+        PMEM_ATOMIC_USE_DIRTY_FLAG: OFF
+        PMEM_ATOMIC_BUILD_TESTS: ON
         DBGROUP_TEST_THREAD_NUM: 8
         DBGROUP_TEST_EXEC_NUM: "1E5"
         DBGROUP_TEST_RANDOM_SEED: 0

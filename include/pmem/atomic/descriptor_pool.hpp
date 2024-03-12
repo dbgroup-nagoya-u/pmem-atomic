@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef PMWCAS_DESCRIPTOR_POOL_HPP
-#define PMWCAS_DESCRIPTOR_POOL_HPP
+#ifndef PMEM_ATOMIC_DESCRIPTOR_POOL_HPP
+#define PMEM_ATOMIC_DESCRIPTOR_POOL_HPP
 
 // C++ standard libraries
 #include <string>
@@ -24,8 +24,8 @@
 #include <libpmemobj.h>
 
 // local sources
-#include "pmwcas/atomic.hpp"
-#include "pmwcas/pmwcas_descriptor.hpp"
+#include "pmem/atomic/atomic.hpp"
+#include "pmem/atomic/pmwcas_descriptor.hpp"
 
 namespace dbgroup::pmem::atomic
 {
@@ -92,4 +92,4 @@ class DescriptorPool
 
 }  // namespace dbgroup::pmem::atomic
 
-#endif
+#endif  // PMEM_ATOMIC_DESCRIPTOR_POOL_HPP

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef PMWCAS_PMWCAS_DESCRIPTOR_HPP
-#define PMWCAS_PMWCAS_DESCRIPTOR_HPP
+#ifndef PMEM_ATOMIC_PMWCAS_DESCRIPTOR_HPP
+#define PMEM_ATOMIC_PMWCAS_DESCRIPTOR_HPP
 
 // C++ standard libraries
 #include <cassert>
@@ -24,9 +24,9 @@
 #include <memory>
 
 // local sources
-#include "pmwcas/component/common.hpp"
-#include "pmwcas/component/pmwcas_target.hpp"
-#include "pmwcas/utility.hpp"
+#include "pmem/atomic/component/common.hpp"
+#include "pmem/atomic/component/pmwcas_target.hpp"
+#include "pmem/atomic/utility.hpp"
 
 namespace dbgroup::pmem::atomic
 {
@@ -140,4 +140,4 @@ class alignas(kPMEMLineSize) PMwCASDescriptor
 
 }  // namespace dbgroup::pmem::atomic
 
-#endif  // PMWCAS_PMWCAS_DESCRIPTOR_HPP
+#endif  // PMEM_ATOMIC_PMWCAS_DESCRIPTOR_HPP

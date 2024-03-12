@@ -43,36 +43,36 @@ set(
 #------------------------------------------------------------------------------#
 
 # define function to add unit tests in the same format
-function(ADD_PMWCAS_TEST PMWCAS_TEST_TARGET)
-  add_executable(${PMWCAS_TEST_TARGET}
-    "${CMAKE_CURRENT_SOURCE_DIR}/${PMWCAS_TEST_TARGET}.cpp"
+function(ADD_PMEM_ATOMIC_TEST PMEM_ATOMIC_TEST_TARGET)
+  add_executable(${PMEM_ATOMIC_TEST_TARGET}
+    "${CMAKE_CURRENT_SOURCE_DIR}/${PMEM_ATOMIC_TEST_TARGET}.cpp"
   )
-  target_compile_features(${PMWCAS_TEST_TARGET} PRIVATE
+  target_compile_features(${PMEM_ATOMIC_TEST_TARGET} PRIVATE
     "cxx_std_17"
   )
-  target_compile_options(${PMWCAS_TEST_TARGET} PRIVATE
+  target_compile_options(${PMEM_ATOMIC_TEST_TARGET} PRIVATE
     -Wall
     -Wextra
     $<$<STREQUAL:${CMAKE_BUILD_TYPE},"Release">:"-O2 -march=native">
     $<$<STREQUAL:${CMAKE_BUILD_TYPE},"RelWithDebInfo">:"-g3 -Og -pg">
     $<$<STREQUAL:${CMAKE_BUILD_TYPE},"Debug">:"-g3 -O0 -pg">
   )
-  target_link_libraries(${PMWCAS_TEST_TARGET} PRIVATE
+  target_link_libraries(${PMEM_ATOMIC_TEST_TARGET} PRIVATE
     dbgroup::${PROJECT_NAME}
     GTest::gtest_main
   )
-  target_compile_definitions(${PMWCAS_TEST_TARGET} PRIVATE
+  target_compile_definitions(${PMEM_ATOMIC_TEST_TARGET} PRIVATE
     DBGROUP_TEST_THREAD_NUM=${DBGROUP_TEST_THREAD_NUM}
     DBGROUP_TEST_EXEC_NUM=${DBGROUP_TEST_EXEC_NUM}
     DBGROUP_TEST_RANDOM_SEED=${DBGROUP_TEST_RANDOM_SEED}
     DBGROUP_TEST_TMP_PMEM_PATH=${DBGROUP_TEST_TMP_PMEM_PATH}
   )
 
-  add_test(NAME ${PMWCAS_TEST_TARGET} COMMAND $<TARGET_FILE:${PMWCAS_TEST_TARGET}>)
+  add_test(NAME ${PMEM_ATOMIC_TEST_TARGET} COMMAND $<TARGET_FILE:${PMEM_ATOMIC_TEST_TARGET}>)
 endfunction()
 
 # add unit tests to build targets
-ADD_PMWCAS_TEST("atomic_test")
-ADD_PMWCAS_TEST("pmwcas_target_test")
-ADD_PMWCAS_TEST("pmwcas_descriptor_test")
-ADD_PMWCAS_TEST("descriptor_pool_test")
+ADD_PMEM_ATOMIC_TEST("atomic_test")
+ADD_PMEM_ATOMIC_TEST("pmwcas_target_test")
+ADD_PMEM_ATOMIC_TEST("pmwcas_descriptor_test")
+ADD_PMEM_ATOMIC_TEST("descriptor_pool_test")

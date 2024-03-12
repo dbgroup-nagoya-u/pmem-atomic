@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef PMWCAS_COMPONENT_PMWCAS_TARGET_HPP
-#define PMWCAS_COMPONENT_PMWCAS_TARGET_HPP
+#ifndef PMEM_ATOMIC_COMPONENT_PMWCAS_TARGET_HPP
+#define PMEM_ATOMIC_COMPONENT_PMWCAS_TARGET_HPP
 
 // C++ standard libraries
 #include <cstdint>
@@ -25,7 +25,7 @@
 #include <libpmemobj.h>
 
 // local sources
-#include "pmwcas/component/common.hpp"
+#include "pmem/atomic/component/common.hpp"
 
 namespace dbgroup::pmem::atomic::component
 {
@@ -145,4 +145,4 @@ class PMwCASTarget
 
 }  // namespace dbgroup::pmem::atomic::component
 
-#endif  // PMWCAS_COMPONENT_PMWCAS_TARGET_HPP
+#endif  // PMEM_ATOMIC_COMPONENT_PMWCAS_TARGET_HPP
