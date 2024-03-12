@@ -21,7 +21,7 @@
 #include <filesystem>
 #include <functional>
 
-// external sources
+// external libraries
 #include "gtest/gtest.h"
 
 // local sources
@@ -141,7 +141,7 @@ class MyClass
   uint64_t control_bits_ : 2;
 };
 
-namespace dbgroup::atomic::pmwcas
+namespace dbgroup::pmem::atomic
 {
 /**
  * @brief Specialization to enable PMwCAS to swap our sample class.
@@ -149,12 +149,12 @@ namespace dbgroup::atomic::pmwcas
  */
 template <>
 constexpr auto
-CanPMwCAS<MyClass>()  //
+CanPCAS<MyClass>()  //
     -> bool
 {
   return true;
 }
 
-}  // namespace dbgroup::atomic::pmwcas
+}  // namespace dbgroup::pmem::atomic
 
 #endif  // TEST_COMMON_HPP

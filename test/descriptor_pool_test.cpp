@@ -25,10 +25,14 @@
 #include <thread>
 #include <unordered_set>
 
+// external libraries
+#include "gtest/gtest.h"
+#include "thread/common.hpp"
+
 // local sources
 #include "common.hpp"
 
-namespace dbgroup::atomic::pmwcas::test
+namespace dbgroup::pmem::atomic::test
 {
 // prepare a temporary directory
 auto *const env = testing::AddGlobalTestEnvironment(new TmpDirManager);
@@ -38,16 +42,11 @@ auto *const env = testing::AddGlobalTestEnvironment(new TmpDirManager);
  *############################################################################*/
 
 constexpr const char *kPoolName = "pmwcas_descriptor_pool_test";
+constexpr auto kMaxThreadNum = ::dbgroup::thread::kMaxThreadNum;
 
 class DescriptorPoolFixture : public ::testing::Test
 {
  protected:
-  /*############################################################################
-   * Type aliases
-   *##########################################################################*/
-
-  using PMwCASDescriptor = component::PMwCASDescriptor;
-
   /*############################################################################
    * Setup/Teardown
    *##########################################################################*/
@@ -189,4 +188,4 @@ TEST_F(DescriptorPoolFixture, GetDifferentDescriptorsInAllThreadTwice)
   GetAllDescriptor(kMaxThreadNum);
 }
 
-}  // namespace dbgroup::atomic::pmwcas::test
+}  // namespace dbgroup::pmem::atomic::test

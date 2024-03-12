@@ -18,16 +18,16 @@
 #define PMWCAS_COMPONENT_PMWCAS_TARGET_HPP
 
 // C++ standard libraries
-#include <atomic>
+#include <cstdint>
+#include <memory>
 
 // external system libraries
-#include <libpmem.h>
 #include <libpmemobj.h>
 
 // local sources
-#include "pmwcas_word.hpp"
+#include "pmwcas/component/common.hpp"
 
-namespace dbgroup::atomic::pmwcas::component
+namespace dbgroup::pmem::atomic::component
 {
 /**
  * @brief A class to represent a PMwCAS target.
@@ -55,13 +55,17 @@ class PMwCASTarget
    * @param new_val An desired value of the target address.
    */
   template <class T>
-  constexpr PMwCASTarget(  //
+  PMwCASTarget(  //
       void *addr,
       const T old_val,
       const T new_val,
       const std::memory_order fence)
-      : oid_{pmemobj_oid(addr)}, old_val_{old_val}, new_val_{new_val}, fence_{fence}
+      : oid_{pmemobj_oid(addr)},
+        old_val_{ToUInt64(old_val)},
+        new_val_{ToUInt64(new_val)},
+        fence_{fence}
   {
+    static_assert(IsAtomic<T>());
   }
 
   constexpr PMwCASTarget(const PMwCASTarget &) = default;
@@ -85,111 +89,41 @@ class PMwCASTarget
    *##########################################################################*/
 
   /**
-   * @brief Embed a descriptor into this target address to linearlize PMwCAS operations.
+   * @brief Embed a descriptor into this target address.
    *
    * @param desc_addr A memory address of a target descriptor.
    * @retval true if the descriptor address is successfully embedded.
    * @retval false otherwise.
    */
-  auto
-  EmbedDescriptor(const PMwCASWord desc_addr)  //
-      -> bool
-  {
-    auto *addr = static_cast<std::atomic<PMwCASWord> *>(pmemobj_direct(oid_));
-    PMwCASWord expected{};
-    for (size_t i = 0; true; ++i) {
-      // try to embed a PMwCAS descriptor
-      expected = addr->load(kMORelax);
-      if (expected == old_val_
-          && addr->compare_exchange_strong(expected, desc_addr, fence_, kMORelax)) {
-        return true;
-      }
-      if (!expected.IsIntermediate() || i >= kRetryNum) return false;
-
-      // retry if another descriptor is embedded
-      PMWCAS_SPINLOCK_HINT
-    }
-  }
+  auto EmbedDescriptor(    //
+      uint64_t desc_addr)  //
+      -> bool;
 
   /**
    * @brief Flush a value of this target address.
    *
    */
-  void
-  Flush()
-  {
-    auto *addr = static_cast<std::atomic<PMwCASWord> *>(pmemobj_direct(oid_));
-    pmem_flush(addr, kWordSize);
-  }
+  void Flush();
 
   /**
    * @brief Update a value of this target address.
    *
    */
-  void
-  Redo()
-  {
-    auto *addr = static_cast<std::atomic<PMwCASWord> *>(pmemobj_direct(oid_));
-
-    if constexpr (kUseDirtyFlag) {
-      auto dirty_val = new_val_;
-      dirty_val.SetDirtyFlag();
-      addr->store(dirty_val, kMORelax);
-      pmem_persist(addr, kWordSize);
-      addr->store(new_val_, kMORelax);
-      pmem_flush(addr, kWordSize);
-    } else {
-      addr->store(new_val_, kMORelax);
-      pmem_flush(addr, kWordSize);
-    }
-  }
+  void Redo();
 
   /**
    * @brief Revert a value of this target address.
    *
    */
-  void
-  Undo()
-  {
-    auto *addr = static_cast<std::atomic<PMwCASWord> *>(pmemobj_direct(oid_));
-
-    if constexpr (kUseDirtyFlag) {
-      auto dirty_val = old_val_;
-      dirty_val.SetDirtyFlag();
-      addr->store(dirty_val, kMORelax);
-      pmem_persist(addr, kWordSize);
-      addr->store(old_val_, kMORelax);
-      pmem_flush(addr, kWordSize);
-    } else {
-      addr->store(old_val_, kMORelax);
-      pmem_flush(addr, kWordSize);
-    }
-  }
+  void Undo();
 
   /**
    * @brief Recover and flush the target.
    *
    */
-  void
-  Recover(  //
-      const bool succeeded,
-      PMwCASWord desc_addr)
-  {
-    auto *addr = static_cast<std::atomic<PMwCASWord> *>(pmemobj_direct(oid_));
-    const auto desired = (succeeded) ? new_val_ : old_val_;
-    addr->compare_exchange_strong(desc_addr, desired, kMORelax);
-
-    if constexpr (kUseDirtyFlag) {
-      // if CAS failed, `desc_addr` has the current value
-      if (desc_addr.IsNotPersisted()) {
-        auto val = desc_addr;
-        val.ClearDirtyFlag();
-        addr->store(val, kMORelax);
-      }
-    }
-
-    pmem_flush(addr, kWordSize);
-  }
+  void Recover(  //
+      bool succeeded,
+      uint64_t desc_addr);
 
  private:
   /*############################################################################
@@ -200,15 +134,15 @@ class PMwCASTarget
   PMEMoid oid_{};
 
   /// @brief An expected value of a target field.
-  PMwCASWord old_val_{};
+  uint64_t old_val_{};
 
   /// @brief An inserting value into a target field.
-  PMwCASWord new_val_{};
+  uint64_t new_val_{};
 
   /// @brief A fence to be inserted when embedding a new value.
   std::memory_order fence_{std::memory_order_seq_cst};
 };
 
-}  // namespace dbgroup::atomic::pmwcas::component
+}  // namespace dbgroup::pmem::atomic::component
 
 #endif  // PMWCAS_COMPONENT_PMWCAS_TARGET_HPP

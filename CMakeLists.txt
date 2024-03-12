@@ -16,7 +16,6 @@ project(
 if(NOT TARGET dbgroup::${PROJECT_NAME})
   # enable features
   include(FetchContent)
-  include(CheckIncludeFileCXX)
   find_package(PkgConfig)
 
   #----------------------------------------------------------------------------#
@@ -36,13 +35,13 @@ if(NOT TARGET dbgroup::${PROJECT_NAME})
   )
 
   set(
-    PMWCAS_RETRY_THRESHOLD
+    PMWCAS_SPINLOCK_RETRY_NUM
     "10" CACHE STRING
     "The maximum number of retries for preventing busy loops."
   )
 
   set(
-    PMWCAS_SLEEP_TIME
+    PMWCAS_BACKOFF_TIME
     "10" CACHE STRING
     "A sleep time for preventing busy loops [us]."
   )
@@ -58,9 +57,6 @@ if(NOT TARGET dbgroup::${PROJECT_NAME})
   pkg_check_modules(LIBPMEM REQUIRED libpmem)
   pkg_check_modules(LIBPMEMOBJ REQUIRED libpmemobj)
 
-  # check SSE support for spinlock hints
-  CHECK_INCLUDE_FILE_CXX("xmmintrin.h" PMWCAS_HAS_SPINLOCK_HINT)
-
   #----------------------------------------------------------------------------#
   # Configure external libraries
   #----------------------------------------------------------------------------#
@@ -69,7 +65,7 @@ if(NOT TARGET dbgroup::${PROJECT_NAME})
   FetchContent_Declare(
     cpp-utility
     GIT_REPOSITORY "https://github.com/dbgroup-nagoya-u/cpp-utility.git"
-    GIT_TAG "c37418e13d8e258b9b76470a4958a974da37c093"
+    GIT_TAG "4a23e598ae5ede15b9c03c860ac156f19ba8112a"
   )
   FetchContent_MakeAvailable(cpp-utility)
 
@@ -77,24 +73,36 @@ if(NOT TARGET dbgroup::${PROJECT_NAME})
   # Build targets
   #----------------------------------------------------------------------------#
 
-  add_library(${PROJECT_NAME} INTERFACE)
+  add_library(${PROJECT_NAME} STATIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/atomic.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/component/common.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/component/pmwcas_target.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/descriptor_pool.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/pmwcas_descriptor.cpp"
+  )
   add_library(dbgroup::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
-  target_compile_features(${PROJECT_NAME} INTERFACE
+  target_compile_features(${PROJECT_NAME} PUBLIC
     "cxx_std_17"
   )
-  target_include_directories(${PROJECT_NAME} INTERFACE
+  target_compile_options(${PROJECT_NAME} PRIVATE
+    -Wall
+    -Wextra
+    $<$<STREQUAL:${CMAKE_BUILD_TYPE},"Release">:"-O2 -march=native">
+    $<$<STREQUAL:${CMAKE_BUILD_TYPE},"RelWithDebInfo">:"-g3 -Og -pg">
+    $<$<STREQUAL:${CMAKE_BUILD_TYPE},"Debug">:"-g3 -O0 -pg">
+  )
+  target_include_directories(${PROJECT_NAME} PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
     "${LIBPMEM_INCLUDE_DIRS}"
     "${LIBPMEMOBJ_INCLUDE_DIRS}"
   )
-  target_compile_definitions(${PROJECT_NAME} INTERFACE
+  target_compile_definitions(${PROJECT_NAME} PUBLIC
     PMWCAS_CAPACITY=${PMWCAS_CAPACITY}
-    PMWCAS_RETRY_THRESHOLD=${PMWCAS_RETRY_THRESHOLD}
-    PMWCAS_SLEEP_TIME=${PMWCAS_SLEEP_TIME}
+    PMWCAS_SPINLOCK_RETRY_NUM=${PMWCAS_SPINLOCK_RETRY_NUM}
+    PMWCAS_BACKOFF_TIME=${PMWCAS_BACKOFF_TIME}
     $<$<BOOL:${PMWCAS_USE_DIRTY_FLAG}>:PMWCAS_USE_DIRTY_FLAG>
-    $<$<BOOL:${PMWCAS_HAS_SPINLOCK_HINT}>:PMWCAS_HAS_SPINLOCK_HINT>
   )
-  target_link_libraries(${PROJECT_NAME} INTERFACE
+  target_link_libraries(${PROJECT_NAME} PUBLIC
     Threads::Threads
     ${LIBPMEM_LIBRARIES}
     ${LIBPMEMOBJ_LIBRARIES}

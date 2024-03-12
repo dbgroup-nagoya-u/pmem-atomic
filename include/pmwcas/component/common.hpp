@@ -19,19 +19,13 @@
 
 // C++ standard libraries
 #include <atomic>
-
-// external system libraries
-#ifdef PMWCAS_HAS_SPINLOCK_HINT
-#include <xmmintrin.h>
-#define PMWCAS_SPINLOCK_HINT _mm_pause();  // NOLINT
-#else
-#define PMWCAS_SPINLOCK_HINT /* do nothing */
-#endif
+#include <cstring>
+#include <type_traits>
 
 // local sources
 #include "pmwcas/utility.hpp"
 
-namespace dbgroup::atomic::pmwcas::component
+namespace dbgroup::pmem::atomic::component
 {
 /*##############################################################################
  * Global enum and constants
@@ -50,6 +44,59 @@ enum DescStatus {
 /// @brief An alias of std::memory_order_relaxed.
 constexpr std::memory_order kMORelax = std::memory_order_relaxed;
 
-}  // namespace dbgroup::atomic::pmwcas::component
+/*##############################################################################
+ * Internal utilities
+ *############################################################################*/
+
+/**
+ * @brief Persist a given value if it includes a dirty flag.
+ *
+ * @param[in] word_addr An address of a target word.
+ * @param[in,out] word A word that may be dirty.
+ */
+void ResolveIntermediateState(  //
+    std::atomic_uint64_t *word_addr,
+    uint64_t &word);
+
+/**
+ * @tparam T A target class.
+ * @retval true if a given class is atomically modifiable.
+ * @retval false otherwise.
+ */
+template <class T>
+constexpr auto
+IsAtomic()  //
+    -> bool
+{
+  return sizeof(T) == kWordSize              //
+         && std::is_trivially_copyable_v<T>  //
+         && std::is_copy_constructible_v<T>  //
+         && std::is_move_constructible_v<T>  //
+         && std::is_copy_assignable_v<T>     //
+         && std::is_move_assignable_v<T>     //
+         && CanPCAS<T>();
+}
+
+/**
+ * @tparam T A target class.
+ * @param obj A source object to be converted.
+ * @return A converted unsigned integer.
+ */
+template <class T>
+auto
+ToUInt64(   //
+    T obj)  //
+    -> uint64_t
+{
+  if constexpr (std::is_pointer_v<T>) {
+    return reinterpret_cast<uint64_t>(obj);
+  } else {
+    uint64_t ret;
+    std::memcpy(&ret, static_cast<void *>(&obj), kWordSize);
+    return ret;
+  }
+}
+
+}  // namespace dbgroup::pmem::atomic::component
 
 #endif  // PMWCAS_COMPONENT_COMMON_HPP

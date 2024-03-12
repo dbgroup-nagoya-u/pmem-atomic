@@ -17,10 +17,13 @@
 // the corresponding header
 #include "pmwcas/component/pmwcas_target.hpp"
 
+// external libraries
+#include "gtest/gtest.h"
+
 // local sources
 #include "common.hpp"
 
-namespace dbgroup::atomic::pmwcas::component::test
+namespace dbgroup::pmem::atomic::component::test
 {
 // prepare a temporary directory
 auto *const env = testing::AddGlobalTestEnvironment(new TmpDirManager);
@@ -74,7 +77,7 @@ class PMwCASTargetFixture : public ::testing::Test
     pmemobj_persist(pop_, target_, sizeof(Target));
 
     pmwcas_target_ = PMwCASTarget{target_, old_val_, new_val_, std::memory_order_relaxed};
-    desc_ = PMwCASWord{0UL, true};
+    desc_ = kPMwCASFlag;
   }
 
   void
@@ -107,7 +110,7 @@ class PMwCASTargetFixture : public ::testing::Test
 
     const bool result = pmwcas_target_.EmbedDescriptor(desc_);
 
-    PMwCASWord word;
+    uint64_t word;
     memcpy(static_cast<void *>(&word), target_, kWordSize);
     if (expect_fail) {
       EXPECT_FALSE(result);
@@ -156,7 +159,7 @@ class PMwCASTargetFixture : public ::testing::Test
   Target *target_{nullptr};
 
   PMwCASTarget pmwcas_target_{};
-  PMwCASWord desc_{};
+  uint64_t desc_{};
 
   Target old_val_{};
   Target new_val_{};
@@ -202,4 +205,5 @@ TYPED_TEST(PMwCASTargetFixture, RecoverPMwCASWithFailedStatusRollBackToExpectedV
 {
   TestFixture::VerifyRecoverPMwCAS(true);
 }
-}  // namespace dbgroup::atomic::pmwcas::component::test
+
+}  // namespace dbgroup::pmem::atomic::component::test

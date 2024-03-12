@@ -15,7 +15,7 @@
  */
 
 // the corresponding header
-#include "pmwcas/component/pmwcas_descriptor.hpp"
+#include "pmwcas/pmwcas_descriptor.hpp"
 
 // C++ standard libraries
 #include <future>
@@ -26,10 +26,16 @@
 #include <utility>
 #include <vector>
 
+// external libraries
+#include "gtest/gtest.h"
+
+// library headers
+#include "pmwcas/atomic.hpp"
+
 // local sources
 #include "common.hpp"
 
-namespace dbgroup::atomic::pmwcas::component::test
+namespace dbgroup::pmem::atomic::component::test
 {
 // prepare a temporary directory
 auto *const env = testing::AddGlobalTestEnvironment(new TmpDirManager);
@@ -174,20 +180,24 @@ class PMwCASDescriptorFixture : public ::testing::Test
     {  // wait for a main thread to release a lock
       const std::shared_lock<std::shared_mutex> lock{worker_lock_};
 
+      constexpr auto kAlignVal = static_cast<std::align_val_t>(kPMEMLineSize);
+      auto *ptr = ::operator new(sizeof(PMwCASDescriptor), kAlignVal);
+      std::unique_ptr<PMwCASDescriptor> desc{reinterpret_cast<PMwCASDescriptor *>(ptr)};
+      desc->Initialize();
+
       for (auto &&targets : operations) {
         // retry until PMwCAS succeeds
         while (true) {
           // register PMwCAS targets
-          PMwCASDescriptor desc{};
           for (auto &&idx : targets) {
             auto *addr = &(target_fields_[idx]);
-            const auto cur_val = Read<Target>(addr);
+            const auto cur_val = PLoad(addr);
             const auto new_val = cur_val + 1;
-            desc.Add(addr, cur_val, new_val);
+            desc->Add(addr, cur_val, new_val);
           }
 
           // perform PMwCAS
-          if (desc.PMwCAS()) break;
+          if (desc->PMwCAS()) break;
         }
       }
     }
@@ -222,4 +232,4 @@ TEST_F(PMwCASDescriptorFixture, PMwCASWithMultiThreadsCorrectlyIncrementTargets)
   VerifyPMwCAS(kTestThreadNum);
 }
 
-}  // namespace dbgroup::atomic::pmwcas::component::test
+}  // namespace dbgroup::pmem::atomic::component::test

@@ -26,8 +26,8 @@ cd pmwcas
 - `PMWCAS_USE_DIRTY_FLAG`: Use dirty flags to indicate words that are not persisted (default: `OFF`).
     - If you do not use dirty flags, you cannot directly modify the target fields of PMwCAS operations (e.g., `std::atomic<T>::store`). If you use dirty flags, you can modify PMwCAS target fields directly, but you should be careful about the state of the flags.
 - `PMWCAS_CAPACITY`: The maximum number of target words of PMwCAS (default: `6`).
-- `PMWCAS_RETRY_THRESHOLD`: The maximum number of retries for preventing busy loops (default: `10`).
-- `PMWCAS_SLEEP_TIME`: A sleep time for preventing busy loops [us] (default: `10`).
+- `PMWCAS_SPINLOCK_RETRY_NUM`: The maximum number of retries for preventing busy loops (default: `10`).
+- `PMWCAS_BACKOFF_TIME`: A back-off time for preventing busy loops [us] (default: `10`).
 - `DBGROUP_MAX_THREAD_NUM`: The maximum number of worker threads (please refer to [cpp-utility](https://github.com/dbgroup-nagoya-u/cpp-utility)).
 
 #### Parameters for Unit Testing

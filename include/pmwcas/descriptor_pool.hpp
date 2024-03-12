@@ -17,20 +17,17 @@
 #ifndef PMWCAS_DESCRIPTOR_POOL_HPP
 #define PMWCAS_DESCRIPTOR_POOL_HPP
 
-// system headers
-#include <sys/stat.h>
-
 // C++ standard libraries
-#include <atomic>
-#include <filesystem>
-#include <iostream>
-#include <memory>
-#include <utility>
+#include <string>
+
+// external system libraries
+#include <libpmemobj.h>
 
 // local sources
-#include "component/pmwcas_descriptor.hpp"
+#include "pmwcas/atomic.hpp"
+#include "pmwcas/pmwcas_descriptor.hpp"
 
-namespace dbgroup::atomic::pmwcas
+namespace dbgroup::pmem::atomic
 {
 /**
  * @brief A class representing the pool of descriptors.
@@ -38,13 +35,6 @@ namespace dbgroup::atomic::pmwcas
  */
 class DescriptorPool
 {
-  /*############################################################################
-   * Type aliases
-   *##########################################################################*/
-
-  using DescStatus = component::DescStatus;
-  using PMwCASDescriptor = component::PMwCASDescriptor;
-
  public:
   /*############################################################################
    * Public constructors and assignment operators
@@ -58,41 +48,7 @@ class DescriptorPool
    */
   explicit DescriptorPool(  //
       const std::string &pmem_path,
-      const std::string &layout_name = "pmwcas_desc_pool")
-  {
-    constexpr size_t kDescPoolSize = sizeof(PMwCASDescriptor) * (kMaxThreadNum + 1);
-    constexpr size_t kPoolSize = kDescPoolSize + PMEMOBJ_MIN_POOL;
-    constexpr auto kModeRW = S_IRUSR | S_IWUSR;  // NOLINT
-    constexpr uintptr_t kMask = kPMEMLineSize - 1;
-
-    // create/open a pool on persistent memory
-    const auto *path = pmem_path.c_str();
-    const auto *layout = layout_name.c_str();
-    if (std::filesystem::exists(pmem_path)) {
-      pop_ = pmemobj_open(path, layout);
-    } else {
-      pop_ = pmemobj_create(path, layout, kPoolSize, kModeRW);
-    }
-    if (pop_ == nullptr) {
-      std::cerr << pmemobj_errormsg() << std::endl;
-      throw std::exception{};
-    }
-
-    // get the pointer to descriptors
-    auto &&root = pmemobj_root(pop_, kDescPoolSize);
-    auto addr = reinterpret_cast<uintptr_t>(pmemobj_direct(root));
-    if ((addr & kMask) > 0) {
-      // move the address to the Intel Optane alignment
-      addr = (addr & ~kMask) + kPMEMLineSize;
-    }
-    desc_pool_ = reinterpret_cast<PMwCASDescriptor *>(addr);
-
-    // if the pool was on persistent memory, check for dirty descriptors
-    for (size_t i = 0; i < kMaxThreadNum; ++i) {
-      desc_pool_[i].Initialize();
-    }
-    pmem_drain();
-  }
+      const std::string &layout_name = "pmwcas_desc_pool");
 
   DescriptorPool(const DescriptorPool &) = delete;
   DescriptorPool(DescriptorPool &&) = delete;
@@ -108,28 +64,19 @@ class DescriptorPool
    * @brief Destroy the DescriptorPool object.
    *
    */
-  ~DescriptorPool()
-  {
-    if (pop_ != nullptr) {
-      pmemobj_close(pop_);
-    }
-  }
+  ~DescriptorPool();
 
   /*############################################################################
    * Public utility functions
    *##########################################################################*/
 
   /**
-   * @note If a thread calls this function multiple times, it will return the same
-   * descriptor.
    * @return The PMwCAS descriptor for the current thread.
+   * @note If a thread calls this function multiple times, it will return the
+   * same descriptor.
    */
-  auto
-  Get()  //
-      -> PMwCASDescriptor *
-  {
-    return &(desc_pool_[::dbgroup::thread::IDManager::GetThreadID()]);
-  }
+  auto Get()  //
+      -> PMwCASDescriptor *;
 
  private:
   /*############################################################################
@@ -143,6 +90,6 @@ class DescriptorPool
   PMwCASDescriptor *desc_pool_{nullptr};
 };
 
-}  // namespace dbgroup::atomic::pmwcas
+}  // namespace dbgroup::pmem::atomic
 
 #endif

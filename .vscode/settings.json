@@ -87,6 +87,7 @@
     "pword",
     "RDCSS",
     "struct",
+    "unflushed",
     "Wextra",
     "xmmintrin",
     "zalloc"

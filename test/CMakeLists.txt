@@ -6,7 +6,7 @@ include(FetchContent)
 FetchContent_Declare(
   googletest
   GIT_REPOSITORY "https://github.com/google/googletest.git"
-  GIT_TAG "58d77fa8070e8cec2dc1ed015d66b454c8d78850" # v1.12.1
+  GIT_TAG "f8d7d77c06936315286eb55f8de22cd23c188571" # v1.14.0
 )
 FetchContent_MakeAvailable(googletest)
 
@@ -65,7 +65,6 @@ function(ADD_PMWCAS_TEST PMWCAS_TEST_TARGET)
 endfunction()
 
 # add unit tests to build targets
-ADD_PMWCAS_TEST("pmwcas_word_test")
 ADD_PMWCAS_TEST("pmwcas_target_test")
 ADD_PMWCAS_TEST("pmwcas_descriptor_test")
 ADD_PMWCAS_TEST("descriptor_pool_test")

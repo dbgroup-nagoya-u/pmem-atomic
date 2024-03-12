@@ -18,50 +18,47 @@
 #define PMWCAS_UTILITY_HPP
 
 // C++ standard libraries
-#include <cassert>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
-#include <string>
 #include <type_traits>
 
-// external sources
-#include "thread/id_manager.hpp"
-
-namespace dbgroup::atomic::pmwcas
+namespace dbgroup::pmem::atomic
 {
 /*##############################################################################
  * Global enum and constants
  *############################################################################*/
 
-#ifdef PMWCAS_USE_DIRTY_FLAG
-/// @brief A flag to indicate the use of dirty flags.
-constexpr bool kUseDirtyFlag = true;
-#else
-/// @brief A flag to indicate the use of dirty flags.
-constexpr bool kUseDirtyFlag = false;
-#endif
+/// @brief Assumes that the length of one word is 8 bytes.
+constexpr size_t kWordSize = 8;
+
+/// @brief Assumes that the size of one cache line is 64 bytes.
+constexpr size_t kCacheLineSize = 64;
+
+/// @brief Assumes that the size of PMEM read/write units is 256 bytes.
+constexpr size_t kPMEMLineSize = 256;
+
+/// @brief A flag for indicating dirty (i.e., unflushed) values.
+constexpr uint64_t kDirtyFlag = 0b1UL << 63UL;
+
+/// @brief A flag for indicating PMwCAS descriptors.
+constexpr uint64_t kPMwCASFlag = 0b1UL << 62UL;
+
+/// @brief A flag for indicating intermediate states.
+constexpr uint64_t kIsIntermediate = kDirtyFlag | kPMwCASFlag;
+
+/*##############################################################################
+ * Tuning parameters
+ *############################################################################*/
 
 /// @brief The maximum number of target words of PMwCAS.
 constexpr size_t kPMwCASCapacity = PMWCAS_CAPACITY;
 
 /// @brief The maximum number of retries for preventing busy loops.
-constexpr size_t kRetryNum = PMWCAS_RETRY_THRESHOLD;
+constexpr size_t kRetryNum = PMWCAS_SPINLOCK_RETRY_NUM;
 
-/// @brief A sleep time for preventing busy loops [us].
-constexpr auto kShortSleep = std::chrono::microseconds{PMWCAS_SLEEP_TIME};
-
-/// @brief The maximum number of threads used in a process.
-constexpr size_t kMaxThreadNum = ::dbgroup::thread::kMaxThreadNum;
-
-/// @brief Assumes that the length of one word is 8 bytes
-constexpr size_t kWordSize = 8;
-
-/// @brief Assumes that the size of one cache line is 64 bytes
-constexpr size_t kCacheLineSize = 64;
-
-/// @brief Assumes that the size of one line on persistent memory is 256 bytes
-constexpr size_t kPMEMLineSize = 256;
+/// @brief A back-off time for preventing busy loops [us].
+constexpr std::chrono::microseconds kBackOffTime{PMWCAS_BACKOFF_TIME};
 
 /*##############################################################################
  * Global utility functions
@@ -74,12 +71,12 @@ constexpr size_t kPMEMLineSize = 256;
  */
 template <class T>
 constexpr auto
-CanPMwCAS()  //
+CanPCAS()  //
     -> bool
 {
   return std::is_same_v<T, uint64_t> || std::is_pointer_v<T>;
 }
 
-}  // namespace dbgroup::atomic::pmwcas
+}  // namespace dbgroup::pmem::atomic
 
 #endif  // PMWCAS_UTILITY_HPP
