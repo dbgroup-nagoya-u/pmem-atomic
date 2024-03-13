@@ -167,6 +167,12 @@ main(  //
 }
 ```
 
+This code will output the following results.
+
+```txt
+400000
+```
+
 ### PMwCAS API
 
 The following code shows the basic usage of PMwCAS operations. Note that you need to use a `::dbgroup::pmem::atomic::PLoad` API to read a current value from a PCAS/PMwCAS target address. Otherwise, you may read an inconsistent data (e.g., an embedded PMwCAS descriptor).
