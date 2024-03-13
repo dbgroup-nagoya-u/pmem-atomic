@@ -57,14 +57,9 @@ DescriptorPool::DescriptorPool(  //
   // create/open a pool on persistent memory
   const auto *path = pmem_path.c_str();
   const auto *layout = layout_name.c_str();
-  if (std::filesystem::exists(pmem_path)) {
-    pop_ = pmemobj_open(path, layout);
-  } else {
-    pop_ = pmemobj_create(path, layout, kPoolSize, kModeRW);
-  }
-  if (pop_ == nullptr) {
-    throw std::runtime_error{pmemobj_errormsg()};
-  }
+  pop_ = std::filesystem::exists(pmem_path) ? pmemobj_open(path, layout)
+                                            : pmemobj_create(path, layout, kPoolSize, kModeRW);
+  if (pop_ == nullptr) throw std::runtime_error{pmemobj_errormsg()};
 
   // get the pointer to descriptors
   auto &&root = pmemobj_root(pop_, kDescPoolSize);
