@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION "3.8")
+cmake_minimum_required(VERSION "3.14")
 
 # decline in-source build
 if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
@@ -7,82 +7,116 @@ endif()
 
 # project information
 project(
-  pmwcas
-  VERSION "0.1.0"
-  DESCRIPTION "PMwCAS library."
+  pmem_atomic
+  VERSION "1.0.0"
+  DESCRIPTION "A utility library for atomic operations in persistent memory."
   LANGUAGES "CXX"
 )
 
-# define source directories
-set(PMWCAS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
-
-# this library uses multi-threads
-find_package(Threads)
-
-# load the module to use pkg-config
-find_package(PkgConfig)
-
-# search library with pkg-config and name its results "LIBPMEM" and "LIBPMEMOBJ"
-pkg_check_modules(LIBPMEM REQUIRED libpmem)
-pkg_check_modules(LIBPMEMOBJ REQUIRED libpmemobj)
-
-# check SSE support for spinlock hints
-include(CheckIncludeFileCXX)
-CHECK_INCLUDE_FILE_CXX("xmmintrin.h" PMWCAS_HAS_SPINLOCK_HINT)
-
-#--------------------------------------------------------------------------------------#
-# PMwCAS configurations
-#--------------------------------------------------------------------------------------#
-
-option(PMWCAS_USE_DIRTY_FLAG "Use dirty flags to indicate words that are not persisted." OFF)
-set(PMWCAS_CAPACITY "6" CACHE STRING "The maximum number of target words for PMwCAS.")
-set(PMWCAS_RETRY_THRESHOLD "10" CACHE STRING "The maximum number of retries for preventing busy loops.")
-set(PMWCAS_SLEEP_TIME "10" CACHE STRING "A sleep time for preventing busy loops [us].")
-
-#--------------------------------------------------------------------------------------#
-# Configure external libraries
-#--------------------------------------------------------------------------------------#
-
-# configure thread ID manager
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/external/cpp-utility")
-
-#--------------------------------------------------------------------------------------#
-# Build targets
-#--------------------------------------------------------------------------------------#
-
 if(NOT TARGET dbgroup::${PROJECT_NAME})
-  add_library(${PROJECT_NAME} INTERFACE)
+  # enable features
+  include(FetchContent)
+  find_package(PkgConfig)
+
+  #----------------------------------------------------------------------------#
+  # Build parameters
+  #----------------------------------------------------------------------------#
+
+  option(
+    PMEM_ATOMIC_USE_DIRTY_FLAG
+    "Use dirty flags to indicate words that are not persisted."
+    OFF
+  )
+
+  set(
+    PMEM_ATOMIC_PMWCAS_CAPACITY
+    "6" CACHE STRING
+    "The maximum number of target words for PMwCAS."
+  )
+
+  set(
+    PMEM_ATOMIC_SPINLOCK_RETRY_NUM
+    "10" CACHE STRING
+    "The maximum number of retries for preventing busy loops."
+  )
+
+  set(
+    PMEM_ATOMIC_BACKOFF_TIME
+    "10" CACHE STRING
+    "A sleep time for preventing busy loops [us]."
+  )
+
+  #----------------------------------------------------------------------------#
+  # Configure system libraries
+  #----------------------------------------------------------------------------#
+
+  # use multi-threads
+  find_package(Threads)
+
+  # use PMDK
+  pkg_check_modules(LIBPMEM REQUIRED libpmem)
+  pkg_check_modules(LIBPMEMOBJ REQUIRED libpmemobj)
+
+  #----------------------------------------------------------------------------#
+  # Configure external libraries
+  #----------------------------------------------------------------------------#
+
+  # use our thread ID manager
+  FetchContent_Declare(
+    cpp-utility
+    GIT_REPOSITORY "https://github.com/dbgroup-nagoya-u/cpp-utility.git"
+    GIT_TAG "d78f5873934ce67b73215b8d44dc97e1d7140199"
+  )
+  FetchContent_MakeAvailable(cpp-utility)
+
+  #----------------------------------------------------------------------------#
+  # Build targets
+  #----------------------------------------------------------------------------#
+
+  add_library(${PROJECT_NAME} STATIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/atomic.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/component/common.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/component/pmwcas_target.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/descriptor_pool.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/pmwcas_descriptor.cpp"
+  )
   add_library(dbgroup::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
-  target_compile_features(${PROJECT_NAME} INTERFACE
+  target_compile_features(${PROJECT_NAME} PUBLIC
     "cxx_std_17"
   )
-  target_include_directories(${PROJECT_NAME} INTERFACE
-    "${PMWCAS_SOURCE_DIR}/include"
+  target_compile_options(${PROJECT_NAME} PRIVATE
+    -Wall
+    -Wextra
+    $<$<STREQUAL:${CMAKE_BUILD_TYPE},"Release">:"-O2 -march=native">
+    $<$<STREQUAL:${CMAKE_BUILD_TYPE},"RelWithDebInfo">:"-g3 -Og -pg">
+    $<$<STREQUAL:${CMAKE_BUILD_TYPE},"Debug">:"-g3 -O0 -pg">
+  )
+  target_include_directories(${PROJECT_NAME} PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
     "${LIBPMEM_INCLUDE_DIRS}"
-    "${LIBPMEMOBJ++_INCLUDE_DIRS}"
+    "${LIBPMEMOBJ_INCLUDE_DIRS}"
   )
-  target_compile_definitions(${PROJECT_NAME} INTERFACE
-    PMWCAS_CAPACITY=${PMWCAS_CAPACITY}
-    PMWCAS_RETRY_THRESHOLD=${PMWCAS_RETRY_THRESHOLD}
-    PMWCAS_SLEEP_TIME=${PMWCAS_SLEEP_TIME}
-    $<$<BOOL:${PMWCAS_USE_DIRTY_FLAG}>:PMWCAS_USE_DIRTY_FLAG>
-    $<$<BOOL:${PMWCAS_HAS_SPINLOCK_HINT}>:PMWCAS_HAS_SPINLOCK_HINT>
+  target_compile_definitions(${PROJECT_NAME} PUBLIC
+    PMEM_ATOMIC_PMWCAS_CAPACITY=${PMEM_ATOMIC_PMWCAS_CAPACITY}
+    PMEM_ATOMIC_SPINLOCK_RETRY_NUM=${PMEM_ATOMIC_SPINLOCK_RETRY_NUM}
+    PMEM_ATOMIC_BACKOFF_TIME=${PMEM_ATOMIC_BACKOFF_TIME}
+    $<$<BOOL:${PMEM_ATOMIC_USE_DIRTY_FLAG}>:PMEM_ATOMIC_USE_DIRTY_FLAG>
   )
-  target_link_libraries(${PROJECT_NAME} INTERFACE
+  target_link_libraries(${PROJECT_NAME} PUBLIC
     Threads::Threads
     ${LIBPMEM_LIBRARIES}
     ${LIBPMEMOBJ_LIBRARIES}
     dbgroup::cpp_utility
   )
-endif()
 
-#--------------------------------------------------------------------------------------#
-# Build Unit Tests
-#--------------------------------------------------------------------------------------#
+  #----------------------------------------------------------------------------#
+  # Build Unit Tests
+  #----------------------------------------------------------------------------#
 
-option(PMWCAS_BUILD_TESTS, "Build unit tests for a PMwCAS library" OFF)
-if(${PMWCAS_BUILD_TESTS})
-  enable_testing()
-  # include unit tests
-  add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/test")
+  option(PMEM_ATOMIC_BUILD_TESTS, "Build unit tests for a PMwCAS library" OFF)
+  if(${PMEM_ATOMIC_BUILD_TESTS})
+    enable_testing()
+    # include unit tests
+    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/test")
+  endif()
 endif()

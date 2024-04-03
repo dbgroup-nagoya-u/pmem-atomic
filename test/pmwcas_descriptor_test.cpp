@@ -15,53 +15,69 @@
  */
 
 // the corresponding header
-#include "pmwcas/component/pmwcas_descriptor.hpp"
+#include "pmem/atomic/pmwcas_descriptor.hpp"
 
 // C++ standard libraries
-#include <future>
+#include <atomic>
+#include <chrono>
+#include <condition_variable>
+#include <cstddef>
+#include <cstdint>
+#include <filesystem>
 #include <mutex>
 #include <random>
-#include <shared_mutex>
+#include <stdexcept>
 #include <thread>
-#include <utility>
 #include <vector>
+
+// external system libraries
+#include <libpmem.h>
+#include <libpmemobj.h>
+
+// external libraries
+#include "gtest/gtest.h"
+
+// library headers
+#include "pmem/atomic/atomic.hpp"
 
 // local sources
 #include "common.hpp"
 
-namespace dbgroup::atomic::pmwcas::component::test
+namespace dbgroup::pmem::atomic::test
 {
 // prepare a temporary directory
 auto *const env = testing::AddGlobalTestEnvironment(new TmpDirManager);
 
-/*######################################################################################
- * Global constants
- *####################################################################################*/
-
-constexpr const char *kPoolName = "pmwcas_pmwcas_descriptor_test";
-constexpr const char *kLayout = "target";
-constexpr size_t kTargetFieldNum = kPMwCASCapacity * kTestThreadNum;
-constexpr size_t kRandomSeed = 20;
-constexpr auto kModeRW = S_IRUSR | S_IWUSR;  // NOLINT
-
 class PMwCASDescriptorFixture : public ::testing::Test
 {
  protected:
-  /*####################################################################################
-   * Internal classes
-   *##################################################################################*/
+  /*############################################################################
+   * Type aliases
+   *##########################################################################*/
 
   using Target = uint64_t;
 
-  /*####################################################################################
+  /*############################################################################
+   * Constants
+   *##########################################################################*/
+
+  static constexpr char kPoolName[] = "pmem_atomic_pmwcas_descriptor_test";
+  static constexpr char kLayout[] = "pmem_atomic_pmwcas_descriptor_test";
+  static constexpr size_t kTargetFieldNum = kPMwCASCapacity * kTestThreadNum;
+
+  /*############################################################################
    * Setup/Teardown
-   *##################################################################################*/
+   *##########################################################################*/
 
   void
   SetUp() override
   {
-    constexpr size_t kPoolSize = PMEMOBJ_MIN_POOL;
     constexpr size_t kArraySize = kWordSize * kTargetFieldNum;
+    constexpr size_t kDescPoolSize = kTestThreadNum * sizeof(PMwCASDescriptor);
+    constexpr size_t kPoolSize = PMEMOBJ_MIN_POOL + kArraySize + kDescPoolSize;
+
+    test_ready_ = false;
+    ready_num_ = 0;
 
     // create a persistent pool for testing
     auto &&pool_path = GetTmpPoolPath();
@@ -78,6 +94,7 @@ class PMwCASDescriptorFixture : public ::testing::Test
     for (size_t i = 0; i < kTargetFieldNum; ++i) {
       target_fields_[i] = 0UL;
     }
+    pmem_persist(target_fields_, kArraySize);
   }
 
   void
@@ -88,114 +105,99 @@ class PMwCASDescriptorFixture : public ::testing::Test
     }
   }
 
-  /*####################################################################################
+  /*############################################################################
    * Functions for verification
-   *##################################################################################*/
+   *##########################################################################*/
 
   void
-  VerifyPMwCAS(const size_t thread_num)
+  VerifyPMwCAS(  //
+      const size_t thread_num)
   {
-    RunPMwCAS(thread_num);
+    // run a function over multi-threads
+    std::vector<std::thread> threads{};
+    std::mt19937_64 rand_engine(kRandomSeed);
+    for (size_t i = 0; i < thread_num; ++i) {
+      threads.emplace_back(&PMwCASDescriptorFixture::PMwCASRandomly, this, rand_engine());
+    }
 
-    // check the target fields are correctly incremented
+    {  // wait for all workers to finish initialization
+      while (ready_num_ < thread_num) {
+        std::this_thread::sleep_for(std::chrono::milliseconds{1});
+      }
+      std::lock_guard x_guard{mtx_};
+      test_ready_ = true;
+    }
+    cond_.notify_all();
+    for (auto &&t : threads) {
+      t.join();
+    }
+
+    // check the total number of modifications
     size_t sum = 0;
     for (size_t i = 0; i < kTargetFieldNum; ++i) {
       sum += target_fields_[i];
     }
-
     EXPECT_EQ(kExecNum * thread_num * kPMwCASCapacity, sum);
   }
 
  private:
-  /*####################################################################################
-   * Internal type aliases
-   *##################################################################################*/
-
-  using PMwCASTargets = std::vector<size_t>;
-
-  /*####################################################################################
+  /*############################################################################
    * Internal utility functions
-   *##################################################################################*/
+   *##########################################################################*/
 
   void
-  RunPMwCAS(const size_t thread_num)
+  PMwCASRandomly(  //
+      const size_t rand_seed)
   {
-    constexpr std::chrono::milliseconds kSleepMS{100};
-    std::vector<std::thread> threads;
-
-    {  // create a lock to prevent workers from executing
-      const std::unique_lock<std::shared_mutex> guard{worker_lock_};
-
-      // run a function over multi-threads
-      std::mt19937_64 rand_engine(kRandomSeed);
-      for (size_t i = 0; i < thread_num; ++i) {
-        const auto rand_seed = rand_engine();
-        threads.emplace_back(&PMwCASDescriptorFixture::PMwCASRandomly, this, rand_seed);
-      }
-
-      // wait for all workers to finish initialization
-      std::this_thread::sleep_for(kSleepMS);
-      const std::unique_lock<std::shared_mutex> lock{main_lock_};
-    }
-
-    // wait for all workers to finish
-    for (auto &&t : threads) t.join();
-  }
-
-  void
-  PMwCASRandomly(const size_t rand_seed)
-  {
-    std::vector<PMwCASTargets> operations;
+    // prepare target indices
+    std::mt19937_64 rand_engine{rand_seed};
+    std::vector<std::vector<size_t>> operations;
     operations.reserve(kExecNum);
-
-    {  // create a lock to prevent a main thread
-      const std::shared_lock<std::shared_mutex> guard{main_lock_};
-
-      // prepare operations to be executed
-      std::mt19937_64 rand_engine{rand_seed};
-      for (size_t i = 0; i < kExecNum; ++i) {
-        // select PMwCAS target fields randomly
-        PMwCASTargets targets;
-        targets.reserve(kPMwCASCapacity);
-        while (targets.size() < kPMwCASCapacity) {
-          size_t idx = id_dist_(rand_engine);
-          const auto iter = std::find(targets.begin(), targets.end(), idx);
-          if (iter == targets.end()) {
-            targets.emplace_back(idx);
-          }
+    for (size_t i = 0; i < kExecNum; ++i) {
+      std::vector<size_t> targets;
+      targets.reserve(kPMwCASCapacity);
+      while (targets.size() < kPMwCASCapacity) {
+        size_t idx = id_dist_(rand_engine);
+        const auto iter = std::find(targets.begin(), targets.end(), idx);
+        if (iter == targets.end()) {
+          targets.emplace_back(idx);
         }
-        std::sort(targets.begin(), targets.end());
-
-        // add a new targets
-        operations.emplace_back(std::move(targets));
       }
+      std::sort(targets.begin(), targets.end());
+      operations.emplace_back(std::move(targets));
     }
 
     {  // wait for a main thread to release a lock
-      const std::shared_lock<std::shared_mutex> lock{worker_lock_};
+      std::unique_lock lock{mtx_};
+      ++ready_num_;
+      cond_.wait(lock, [this] { return test_ready_; });
+    }
 
-      for (auto &&targets : operations) {
-        // retry until PMwCAS succeeds
-        while (true) {
-          // register PMwCAS targets
-          PMwCASDescriptor desc{};
-          for (auto &&idx : targets) {
-            auto *addr = &(target_fields_[idx]);
-            const auto cur_val = Read<Target>(addr);
-            const auto new_val = cur_val + 1;
-            desc.Add(addr, cur_val, new_val);
-          }
+    // prepare descriptor
+    PMEMoid oid{OID_NULL};
+    if (pmemobj_zalloc(pop_, &oid, sizeof(PMwCASDescriptor), 0) != 0) {
+      throw std::runtime_error{pmemobj_errormsg()};
+    }
+    auto *desc = reinterpret_cast<PMwCASDescriptor *>(pmemobj_direct(oid));
+    desc->Initialize();
 
-          // perform PMwCAS
-          if (desc.PMwCAS()) break;
+    // run PMwCAS
+    for (auto &&targets : operations) {
+      while (true) {
+        for (auto &&idx : targets) {
+          auto *addr = &(target_fields_[idx]);
+          const auto cur_val = PLoad(addr);
+          desc->Add(addr, cur_val, cur_val + 1);
         }
+        if (desc->PMwCAS()) break;
       }
     }
+    pmemobj_free(&oid);
   }
 
-  /*####################################################################################
+  /*############################################################################
    * Internal member variables
-   *##################################################################################*/
+   *##########################################################################*/
 
   PMEMobjpool *pop_{nullptr};
 
@@ -203,14 +205,18 @@ class PMwCASDescriptorFixture : public ::testing::Test
 
   std::uniform_int_distribution<size_t> id_dist_{0, kPMwCASCapacity - 1};
 
-  std::shared_mutex main_lock_;
+  std::atomic_size_t ready_num_{0};
 
-  std::shared_mutex worker_lock_;
+  std::mutex mtx_{};
+
+  std::condition_variable cond_{};
+
+  bool test_ready_{false};
 };
 
-/*######################################################################################
+/*##############################################################################
  * Unit test definitions
- *####################################################################################*/
+ *############################################################################*/
 
 TEST_F(PMwCASDescriptorFixture, PMwCASWithSingleThreadCorrectlyIncrementTargets)
 {  //
@@ -222,4 +228,4 @@ TEST_F(PMwCASDescriptorFixture, PMwCASWithMultiThreadsCorrectlyIncrementTargets)
   VerifyPMwCAS(kTestThreadNum);
 }
 
-}  // namespace dbgroup::atomic::pmwcas::component::test
+}  // namespace dbgroup::pmem::atomic::test

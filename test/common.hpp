@@ -18,25 +18,50 @@
 #define TEST_COMMON_HPP
 
 // C++ standard libraries
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
 #include <filesystem>
 #include <functional>
+#include <iostream>
+#include <string>
 
-// external sources
+// system libraries
+#include <sys/stat.h>
+#include <sys/types.h>
+
+// external libraries
 #include "gtest/gtest.h"
 
 // local sources
-#include "pmwcas/utility.hpp"
+#include "pmem/atomic/utility.hpp"
+
+/*##############################################################################
+ * Global macro
+ *############################################################################*/
 
 #define DBGROUP_ADD_QUOTES_INNER(x) #x                     // NOLINT
 #define DBGROUP_ADD_QUOTES(x) DBGROUP_ADD_QUOTES_INNER(x)  // NOLINT
+
+/*##############################################################################
+ * Global contants
+ *############################################################################*/
 
 constexpr size_t kTestThreadNum = DBGROUP_TEST_THREAD_NUM;
 
 constexpr size_t kExecNum = DBGROUP_TEST_EXEC_NUM;
 
+constexpr size_t kRandomSeed = DBGROUP_TEST_RANDOM_SEED;
+
 constexpr std::string_view kTmpPMEMPath = DBGROUP_ADD_QUOTES(DBGROUP_TEST_TMP_PMEM_PATH);
 
+constexpr mode_t kModeRW = S_IRUSR | S_IWUSR;
+
 const std::string_view use_name = std::getenv("USER");
+
+/*##############################################################################
+ * Global utilities for persistent memory
+ *############################################################################*/
 
 inline auto
 GetTmpPoolPath()  //
@@ -66,7 +91,7 @@ class TmpDirManager : public ::testing::Environment
   {
     // check the specified path
     if (kTmpPMEMPath.empty() || !std::filesystem::exists(kTmpPMEMPath)) {
-      std::cerr << "WARN: The correct path to persistent memory is not set." << std::endl;
+      std::cerr << "WARN: The correct path to persistent memory is not set.\n";
       GTEST_SKIP();
     }
 
@@ -85,6 +110,10 @@ class TmpDirManager : public ::testing::Environment
   }
 };
 
+/*##############################################################################
+ * Global utilities for PMwCAS
+ *############################################################################*/
+
 /**
  * @brief An example class to represent CAS-updatable data.
  *
@@ -92,13 +121,15 @@ class TmpDirManager : public ::testing::Environment
 class MyClass
 {
  public:
-  constexpr MyClass() : data_{}, control_bits_{0} {}
-  ~MyClass() = default;
+  constexpr MyClass() : data_{0}, control_bits_{0} {}
 
   constexpr MyClass(const MyClass &) = default;
-  constexpr auto operator=(const MyClass &) -> MyClass & = default;
   constexpr MyClass(MyClass &&) = default;
+
+  constexpr auto operator=(const MyClass &) -> MyClass & = default;
   constexpr auto operator=(MyClass &&) -> MyClass & = default;
+
+  ~MyClass() = default;
 
   constexpr auto
   operator=(const uint64_t value)  //
@@ -119,15 +150,15 @@ class MyClass
   operator!=(const MyClass &comp) const  //
       -> bool
   {
-    return !(*this == comp);
+    return data_ != comp.data_;
   }
 
  private:
-  uint64_t data_ : 63;
-  uint64_t control_bits_ : 1;  // NOLINT
+  uint64_t data_ : 62;
+  uint64_t control_bits_ : 2;
 };
 
-namespace dbgroup::atomic::pmwcas
+namespace dbgroup::pmem::atomic
 {
 /**
  * @brief Specialization to enable PMwCAS to swap our sample class.
@@ -135,12 +166,12 @@ namespace dbgroup::atomic::pmwcas
  */
 template <>
 constexpr auto
-CanPMwCAS<MyClass>()  //
+CanPCAS<MyClass>()  //
     -> bool
 {
   return true;
 }
 
-}  // namespace dbgroup::atomic::pmwcas
+}  // namespace dbgroup::pmem::atomic
 
 #endif  // TEST_COMMON_HPP

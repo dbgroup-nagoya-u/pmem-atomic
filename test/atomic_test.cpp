@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Database Group, Nagoya University
+ * Copyright 2021 Database Group, Nagoya University
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,25 +15,25 @@
  */
 
 // the corresponding header
-#include "pmem/atomic/descriptor_pool.hpp"
+#include "pmem/atomic/atomic.hpp"
 
 // C++ standard libraries
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <cstddef>
-#include <future>
-#include <iterator>
-#include <memory>
+#include <cstdint>
+#include <filesystem>
 #include <mutex>
 #include <thread>
-#include <unordered_set>
-#include <utility>
 #include <vector>
+
+// external system libraries
+#include <libpmem.h>
+#include <libpmemobj.h>
 
 // external libraries
 #include "gtest/gtest.h"
-#include "thread/common.hpp"
 
 // local sources
 #include "common.hpp"
@@ -43,15 +43,21 @@ namespace dbgroup::pmem::atomic::test
 // prepare a temporary directory
 auto *const env = testing::AddGlobalTestEnvironment(new TmpDirManager);
 
-class DescriptorPoolFixture : public ::testing::Test
+class PmemAtomicFixture : public ::testing::Test
 {
  protected:
+  /*############################################################################
+   * Type aliases
+   *##########################################################################*/
+
+  using Target = uint64_t;
+
   /*############################################################################
    * Constants
    *##########################################################################*/
 
-  static constexpr char kPoolName[] = "pmem_atomic_descriptor_pool_test";
-  static constexpr auto kMaxThreadNum = ::dbgroup::thread::kMaxThreadNum;
+  static constexpr char kPoolName[] = "pmem_atomic_atomic_test";
+  static constexpr char kLayout[] = "pmem_atomic_atomic_test";
 
   /*############################################################################
    * Setup/Teardown
@@ -60,14 +66,33 @@ class DescriptorPoolFixture : public ::testing::Test
   void
   SetUp() override
   {
+    constexpr size_t kPoolSize = PMEMOBJ_MIN_POOL;
+
+    test_ready_ = false;
+    ready_num_ = 0;
+
+    // create a persistent pool for testing
     auto &&pool_path = GetTmpPoolPath();
     pool_path /= kPoolName;
-    pool_ = std::make_unique<DescriptorPool>(pool_path);
+    if (std::filesystem::exists(pool_path)) {
+      pop_ = pmemobj_open(pool_path.c_str(), kLayout);
+    } else {
+      pop_ = pmemobj_create(pool_path.c_str(), kLayout, kPoolSize, kModeRW);
+    }
+
+    // initialize target fields
+    auto &&root = pmemobj_root(pop_, kWordSize);
+    target_ = reinterpret_cast<Target *>(pmemobj_direct(root));
+    *target_ = 0UL;
+    pmem_persist(target_, kWordSize);
   }
 
   void
   TearDown() override
   {
+    if (pop_ != nullptr) {
+      pmemobj_close(pop_);
+    }
   }
 
   /*############################################################################
@@ -75,65 +100,30 @@ class DescriptorPoolFixture : public ::testing::Test
    *##########################################################################*/
 
   void
-  GetOneDescriptor()
+  VerifyPCAS(  //
+      const size_t thread_num)
   {
-    auto f = [&]() {
-      auto *desc_1 = pool_->Get();
-      auto *desc_2 = pool_->Get();
-
-      // check if they are the same descriptor
-      EXPECT_EQ(desc_1, desc_2);
-    };
-
-    std::thread t{f};
-    t.join();
-  }
-
-  void
-  GetAllDescriptor(  //
-      const size_t pool_size)
-  {
-    test_ready_ = false;
-    ready_num_ = 0;
-
+    // run a function over multi-threads
     std::vector<std::thread> threads{};
-    std::vector<std::future<PMwCASDescriptor *>> futures{};
-    for (size_t i = 0; i < pool_size; ++i) {
-      std::promise<PMwCASDescriptor *> p{};
-      futures.emplace_back(p.get_future());
-      threads.emplace_back(&DescriptorPoolFixture::GetDescriptor, this, std::move(p));
+    for (size_t i = 0; i < thread_num; ++i) {
+      threads.emplace_back(&PmemAtomicFixture::PCASRandomly, this);
     }
 
-    // wait for all workers to finish initialization
-    while (ready_num_ < pool_size) {
-      std::this_thread::sleep_for(std::chrono::milliseconds{1});
-    }
-
-    std::promise<PMwCASDescriptor *> extra_p{};
-    auto &&extra_f = extra_p.get_future();
-    std::thread extra_t(&DescriptorPoolFixture::GetDescriptor, this, std::move(extra_p));
-    auto rc = extra_f.wait_for(std::chrono::milliseconds(1));
-    EXPECT_EQ(rc, std::future_status::timeout);
-
-    {
+    {  // wait for all workers to finish initialization
+      while (ready_num_ < thread_num) {
+        std::this_thread::sleep_for(std::chrono::milliseconds{1});
+      }
       std::lock_guard x_guard{mtx_};
       test_ready_ = true;
     }
     cond_.notify_all();
-
-    std::vector<PMwCASDescriptor *> results{};
-    results.reserve(pool_size);
-    for (auto &&future : futures) {
-      results.emplace_back(future.get());
-    }
-    for (auto &t : threads) {
+    for (auto &&t : threads) {
       t.join();
     }
 
-    std::unordered_set<PMwCASDescriptor *> distinct(std::begin(results), std::end(results));
-    EXPECT_EQ(distinct.size(), pool_size);
-
-    extra_t.join();
+    // check the total number of modifications
+    size_t sum = *target_;
+    EXPECT_EQ(kExecNum * thread_num, sum);
   }
 
  private:
@@ -142,15 +132,19 @@ class DescriptorPoolFixture : public ::testing::Test
    *##########################################################################*/
 
   void
-  GetDescriptor(  //
-      std::promise<PMwCASDescriptor *> p)
+  PCASRandomly()
   {
-    auto *desc = pool_->Get();
-    p.set_value(desc);
-    {
+    {  // wait for a main thread to release a lock
       std::unique_lock lock{mtx_};
       ++ready_num_;
       cond_.wait(lock, [this] { return test_ready_; });
+    }
+
+    for (size_t i = 0; i < kExecNum; ++i) {
+      auto cur_val = PLoad(target_);
+      while (!PCAS(target_, cur_val, cur_val + 1)) {
+        // continue until PCAS succeeds
+      }
     }
   }
 
@@ -158,7 +152,9 @@ class DescriptorPoolFixture : public ::testing::Test
    * Internal member variables
    *##########################################################################*/
 
-  std::unique_ptr<DescriptorPool> pool_{nullptr};
+  PMEMobjpool *pop_{nullptr};
+
+  Target *target_{nullptr};
 
   std::atomic_size_t ready_num_{0};
 
@@ -173,20 +169,14 @@ class DescriptorPoolFixture : public ::testing::Test
  * Unit test definitions
  *############################################################################*/
 
-TEST_F(DescriptorPoolFixture, GetTwoSameDescriptorInOneThread)
+TEST_F(PmemAtomicFixture, PCASWithSingleThreadCorrectlyIncrementTargets)
 {  //
-  GetOneDescriptor();
+  VerifyPCAS(1);
 }
 
-TEST_F(DescriptorPoolFixture, GetDifferentDescriptorsInAllThread)
-{  //
-  GetAllDescriptor(kMaxThreadNum);
-}
-
-TEST_F(DescriptorPoolFixture, GetDifferentDescriptorsInAllThreadTwice)
+TEST_F(PmemAtomicFixture, PCASWithMultiThreadsCorrectlyIncrementTargets)
 {
-  GetAllDescriptor(kMaxThreadNum);
-  GetAllDescriptor(kMaxThreadNum);
+  VerifyPCAS(kTestThreadNum);
 }
 
 }  // namespace dbgroup::pmem::atomic::test

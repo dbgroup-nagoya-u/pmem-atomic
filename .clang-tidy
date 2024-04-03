@@ -3,12 +3,14 @@ Checks: '
 -*,
 clang-diagnostic-*,
 bugprone-*,
+-bugprone-easily-swappable-parameters,
 cert-*,
 -cert-err58-cpp,
 -cert-msc32-c,
 -cert-msc51-cpp,
 cppcoreguidelines-*,
 -cppcoreguidelines-avoid-c-arrays,
+-cppcoreguidelines-avoid-do-while,
 -cppcoreguidelines-non-private-member-variables-in-classes,
 -cppcoreguidelines-owning-memory,
 -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
@@ -31,7 +33,9 @@ modernize-*,
 -modernize-use-trailing-return-type,
 readability-*,
 -readability-braces-around-statements,
+-readability-identifier-length,
 performance-*,'
+-performance-no-int-to-ptr,
 WarningsAsErrors: ''
 HeaderFilterRegex: '(include|src|test)/.*\.hpp$'
 AnalyzeTemporaryDtors: false
