@@ -2,9 +2,9 @@
 
 [![Ubuntu 22.04](https://github.com/dbgroup-nagoya-u/pmem-atomic/actions/workflows/ubuntu_22.yaml/badge.svg)](https://github.com/dbgroup-nagoya-u/pmem-atomic/actions/workflows/ubuntu_22.yaml) [![Ubuntu 20.04](https://github.com/dbgroup-nagoya-u/pmem-atomic/actions/workflows/ubuntu_20.yaml/badge.svg)](https://github.com/dbgroup-nagoya-u/pmem-atomic/actions/workflows/ubuntu_20.yaml)
 
-This repository is an open source implementation of persistent compare-and-swap (PCAS) and persistent multi-word CAS (PMwCAS) operations for research use. For more information, please refer to the following paper.
+This repository is an open-source implementation of persistent compare-and-swap (PCAS) and persistent multi-word CAS (PMwCAS) operations for research use. For more information, please refer to the following paper.
 
-> 
+> K. Sugiura, M. Nishimura, and Y. Ishikawa, "Practical Persistent Multi-Word Compare-and-Swap Algorithms for Many-Core CPUs," arXiv:2404.01710 [cs.DB], 2024.
 
 - [Build](#build)
     - [Prerequisites](#prerequisites)
@@ -14,7 +14,7 @@ This repository is an open source implementation of persistent compare-and-swap 
     - [Linking by CMake](#linking-by-cmake)
     - [PCAS API](#pcas-api)
     - [PMwCAS API](#pmwcas-api)
-    - [Swapping Your Own Classes with PCAS/PMwCAS](#swapping-your-own-classes-with-pcaspmwcas)
+    - [Swapping User-Defined Classes using PCAS/PMwCAS](#swapping-user-defined-classes-using-pcaspmwcas)
 - [Acknowledgments](#acknowledgments)
 
 ## Build
@@ -38,7 +38,7 @@ cd pmem-atomic
 - `PMEM_ATOMIC_PMWCAS_CAPACITY`: The maximum number of target words of PMwCAS (default: `6`).
 - `PMEM_ATOMIC_SPINLOCK_RETRY_NUM`: The maximum number of retries for preventing busy loops (default: `10`).
 - `PMEM_ATOMIC_BACKOFF_TIME`: A back-off time for preventing busy loops [us] (default: `10`).
-- `PMEM_ATOMIC_USE_DIRTY_FLAG`: Use dirty flags to indicate words that are not persisted (default: `OFF`).
+- `PMEM_ATOMIC_USE_DIRTY_FLAG`: Use dirty flags to indicate words that are not persistent (default: `OFF`).
 - `DBGROUP_MAX_THREAD_NUM`: The maximum number of worker threads (please refer to [cpp-utility](https://github.com/dbgroup-nagoya-u/cpp-utility)).
 
 #### Parameters for Unit Testing
@@ -286,7 +286,7 @@ This code will output the following results.
 2nd field: 400000
 ```
 
-### Swapping Your Own Classes with PCAS/PMwCAS
+### Swapping User-Defined Classes using PCAS/PMwCAS
 
 By default, this library only deal with `unsigned long` and pointer types as PCAS/PMwCAS targets. To make your own class the target of PMwCAS operations, it must satisfy the following conditions:
 
@@ -338,4 +338,4 @@ CanPCAS<MyClass>()  //
 
 ## Acknowledgments
 
-This work is based on results obtained from project JPNP16007 commissioned by the New Energy and Industrial Technology Development Organization (NEDO). In addition, this work was supported partly by KAKENHI (16H01722 and 20K19804).
+This work is based on results obtained from a project, JPNP16007, commissioned by the New Energy and Industrial Technology Development Organization (NEDO). In addition, this work was partly supported by JSPS KAKENHI Grant Numbers JP20K19804, JP21H03555, and JP22H03594.
